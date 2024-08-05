@@ -1,4 +1,4 @@
-use clap::{Parser, Subcommand};
+use clap::{Parser, Subcommand, ValueEnum};
 
 #[derive(Parser, Debug)]
 #[command(version, about)]
@@ -18,10 +18,13 @@ pub enum CliCommand {
     Server(ServerCommand),
     /// Show FHIR server metadata
     Metadata,
+    /// Install a FHIR package
+    Install(InstallCommand),
 }
 
 #[derive(Subcommand, Clone, Debug)]
 pub enum ServerCommand {
+    /// List currently configured servers
     List,
     /// Add a new FHIR server with the provided URL
     Add {
@@ -30,11 +33,29 @@ pub enum ServerCommand {
         name: Option<String>,
     },
     /// Remove a FHIR server
-    Remove {
-        name: String,
-    },
-    /// Set a FHIR server as the default instance
-    Default {
-        name: String,
-    },
+    Remove { name: String },
+    /// Set a FHIR server as the default
+    Default { name: String },
+}
+
+#[derive(Parser, Clone, Debug)]
+pub struct InstallCommand {
+    /// Item to install
+    pub name: String,
+    /// Type of the installation target
+    #[clap(value_enum, short, long, default_value_t)]
+    pub r#type: InstallType,
+    /// Registry URL for FHIR packages
+    #[clap(short, long, default_value = "https://packages.simplifier.net")]
+    pub registry: String,
+}
+
+#[derive(Clone, Copy, Debug, Default, ValueEnum)]
+pub enum InstallType {
+    /// FHIR Package from a registry
+    #[default]
+    Package,
+    /// Local directory
+    #[value(alias("local"), alias("dir"))]
+    Directory,
 }

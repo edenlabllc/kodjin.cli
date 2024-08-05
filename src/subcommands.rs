@@ -1,41 +1,34 @@
 use crate::{
-    args::ServerCommand,
+    args::{InstallCommand, InstallType, ServerCommand},
     client::FhirClient,
     config::{Config, ServerConfig},
+    installer,
 };
 use anyhow::bail;
+use console::style;
 use indicatif::ProgressBar;
-use std::{io::Write, time::Duration};
-use termcolor::{Color, ColorChoice, ColorSpec, StandardStream, WriteColor};
+use std::{path::PathBuf, time::Duration};
 
 pub fn server(cmd: ServerCommand, mut config: Config) -> anyhow::Result<()> {
-    let mut stdout = StandardStream::stdout(ColorChoice::Auto);
-
     match cmd {
         ServerCommand::List => {
-            stdout.set_color(ColorSpec::new().set_bold(true).set_underline(true))?;
-            writeln!(stdout, "List of currently configured servers:")?;
-            stdout.reset()?;
+            println!(
+                "{}",
+                style("List of currently configured servers:").underlined()
+            );
 
             for (server_name, server_config) in &config.servers {
-                write!(stdout, "- ")?;
+                print!("- ");
                 if *server_name == server_config.url {
-                    stdout.set_color(ColorSpec::new().set_bold(true))?;
-                    write!(stdout, "{server_name}")?;
-                    stdout.reset()?;
+                    print!("{}", style(server_name).bold());
                 } else {
-                    stdout.set_color(ColorSpec::new().set_bold(true))?;
-                    write!(stdout, "{server_name}")?;
-                    stdout.reset()?;
-                    write!(stdout, " ({})", server_config.url)?;
+                    print!("{} ({})", style(server_name).bold(), server_config.url);
                 }
 
                 if config.current_server.as_ref() == Some(server_name) {
-                    stdout.set_color(ColorSpec::new().set_bold(true))?;
-                    write!(stdout, " (default)")?;
-                    stdout.reset()?;
+                    print!(" {}", style("(default)").bold());
                 }
-                writeln!(stdout)?;
+                println!();
             }
 
             Ok(())
@@ -63,28 +56,23 @@ pub fn server(cmd: ServerCommand, mut config: Config) -> anyhow::Result<()> {
 
             bar.finish_and_clear();
 
-            write!(stdout, "Added server")?;
-            stdout.set_color(ColorSpec::new().set_bold(true))?;
-            write!(stdout, " {name}")?;
-            stdout.reset()?;
+            print!("Added server {}", style(name).bold());
 
             if let Some(software) = &metadata.software {
-                write!(stdout, " running {}", software.name)?;
+                print!(" running {}", software.name);
                 if let Some(version) = &software.version {
-                    write!(stdout, " {version}")?;
+                    print!(" {version}");
                 }
             }
-            writeln!(stdout)?;
+            println!();
 
             Ok(())
         }
         ServerCommand::Remove { name } => {
             if config.servers.shift_remove(&name).is_some() {
                 config.save()?;
-                write!(stdout, "Removed server")?;
-                stdout.set_color(ColorSpec::new().set_bold(true))?;
-                writeln!(stdout, " {name}")?;
-                stdout.reset()?;
+
+                println!("Removed server {}", style(name).bold());
 
                 Ok(())
             } else {
@@ -93,7 +81,7 @@ pub fn server(cmd: ServerCommand, mut config: Config) -> anyhow::Result<()> {
         }
         ServerCommand::Default { name } => {
             if config.servers.contains_key(&name) {
-                writeln!(stdout, "Setting {name} as the default server")?;
+                println!("Setting {} as the default server", style(&name).bold());
 
                 config.current_server = Some(name);
                 config.save()?;
@@ -112,8 +100,6 @@ pub fn metadata(client: FhirClient) -> anyhow::Result<()> {
     let metadata = client.get_metadata()?;
 
     bar.finish_and_clear();
-
-    let mut stdout = StandardStream::stdout(ColorChoice::Auto);
 
     let values = [
         ("Name", metadata.name),
@@ -136,10 +122,19 @@ pub fn metadata(client: FhirClient) -> anyhow::Result<()> {
 
     for (key, value) in values {
         if let Some(value) = value {
-            stdout.set_color(ColorSpec::new().set_fg(Some(Color::Blue)))?;
-            write!(stdout, "{key}: ")?;
-            stdout.reset()?;
-            writeln!(stdout, "{value}")?;
+            println!("{}: {value}", style(key).blue());
+        }
+    }
+
+    Ok(())
+}
+
+pub fn install(cmd: InstallCommand, client: FhirClient) -> anyhow::Result<()> {
+    match cmd.r#type {
+        InstallType::Package => todo!(),
+        InstallType::Directory => {
+            let path = PathBuf::from(cmd.name);
+            installer::process_directory(&path, &client)?;
         }
     }
 

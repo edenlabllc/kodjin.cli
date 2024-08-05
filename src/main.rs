@@ -1,6 +1,7 @@
 mod args;
 mod client;
 mod config;
+mod installer;
 mod subcommands;
 
 use anyhow::Context;
@@ -8,8 +9,8 @@ use args::{Args, CliCommand};
 use clap::Parser;
 use client::FhirClient;
 use config::Config;
-use std::{io::Write, process::ExitCode};
-use termcolor::{Color, ColorChoice, ColorSpec, StandardStream, WriteColor};
+use console::style;
+use std::process::ExitCode;
 
 fn main() -> ExitCode {
     let args = Args::parse();
@@ -26,22 +27,21 @@ fn main() -> ExitCode {
 fn run(args: Args) -> anyhow::Result<()> {
     let config = Config::load_or_create()?;
 
-    match args.command {
+    match args.command.clone() {
         CliCommand::Server(cmd) => subcommands::server(cmd, config),
         CliCommand::Metadata => {
             let client = get_client(&config, &args)?;
             subcommands::metadata(client)
         }
+        CliCommand::Install(cmd) => {
+            let client = get_client(&config, &args)?;
+            subcommands::install(cmd, client)
+        }
     }
 }
 
 fn print_error(error: anyhow::Error) {
-    let mut stderr = StandardStream::stderr(ColorChoice::Auto);
-    stderr
-        .set_color(ColorSpec::new().set_fg(Some(Color::Red)))
-        .expect("Failed to set terminal color");
-    writeln!(stderr, "Error: {error:#}").unwrap();
-    stderr.reset().expect("Could not reset color");
+    eprintln!("{} {error:#}", style("Error:").red());
 }
 
 fn get_client(config: &Config, args: &Args) -> anyhow::Result<FhirClient> {
