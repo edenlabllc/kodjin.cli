@@ -2,6 +2,7 @@ mod args;
 mod client;
 mod config;
 mod installer;
+mod registry;
 mod subcommands;
 
 use anyhow::Context;
@@ -12,10 +13,11 @@ use config::Config;
 use console::style;
 use std::process::ExitCode;
 
-fn main() -> ExitCode {
+#[tokio::main(flavor = "current_thread")]
+async fn main() -> ExitCode {
     let args = Args::parse();
 
-    match run(args) {
+    match run(args).await {
         Ok(()) => ExitCode::SUCCESS,
         Err(err) => {
             print_error(err);
@@ -24,22 +26,22 @@ fn main() -> ExitCode {
     }
 }
 
-fn run(args: Args) -> anyhow::Result<()> {
+async fn run(args: Args) -> anyhow::Result<()> {
     let config = Config::load_or_create()?;
 
     match args.command.clone() {
-        CliCommand::Server(cmd) => subcommands::server(cmd, config),
+        CliCommand::Server(cmd) => subcommands::server(cmd, config).await,
         CliCommand::Metadata => {
             let client = get_client(&config, &args)?;
-            subcommands::metadata(client)
+            subcommands::metadata(client).await
         }
         CliCommand::Install(cmd) => {
             let client = get_client(&config, &args)?;
-            subcommands::install(cmd, client)
+            subcommands::install(cmd, client).await
         }
         CliCommand::Uninstall(cmd) => {
             let client = get_client(&config, &args)?;
-            subcommands::uninstall(cmd, client)
+            subcommands::uninstall(cmd, client).await
         }
     }
 }

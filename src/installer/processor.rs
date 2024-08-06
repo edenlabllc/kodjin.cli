@@ -14,7 +14,7 @@ const RESOURCE_TYPES_ORDER: &[&str] = &[
     "ConceptMap",
 ];
 
-pub fn process_resources(
+pub async fn process_resources(
     ctx: &InstallContext,
     mut resources: IndexMap<String, Vec<Resource>>,
 ) -> usize {
@@ -30,13 +30,13 @@ pub fn process_resources(
     // First we process resources in the defined order
     for resource_type in RESOURCE_TYPES_ORDER {
         if let Some(resources) = resources.shift_remove(*resource_type) {
-            processed_count += process_resources_type(ctx, resource_type, resources, &bar);
+            processed_count += process_resources_type(ctx, resource_type, resources, &bar).await;
         }
     }
 
     // Process remaining resource types which were not in the list
     for (resource_type, resources) in resources.into_iter() {
-        processed_count += process_resources_type(ctx, &resource_type, resources, &bar);
+        processed_count += process_resources_type(ctx, &resource_type, resources, &bar).await;
     }
 
     bar.finish_and_clear();
@@ -45,7 +45,7 @@ pub fn process_resources(
 }
 
 /// Returns the number of resources which were successfully uploaded
-fn process_resources_type(
+async fn process_resources_type(
     ctx: &InstallContext,
     resource_type: &str,
     resources: Vec<Resource>,
@@ -61,19 +61,21 @@ fn process_resources_type(
         ));
 
         match ctx.action {
-            Action::Install => match process_resource(resource_type, &resource, &ctx.client) {
-                Ok(()) => count += 1,
-                Err(err) => {
-                    bar.suspend(|| {
-                        let msg = format!(
-                            "Warning: could not process file {:?}: {err:#}",
-                            resource.source_path
-                        );
-                        println!("{}", style(msg).yellow())
-                    });
+            Action::Install => {
+                match process_resource(resource_type, &resource, &ctx.client).await {
+                    Ok(()) => count += 1,
+                    Err(err) => {
+                        bar.suspend(|| {
+                            let msg = format!(
+                                "Warning: could not process file {:?}: {err:#}",
+                                resource.source_path
+                            );
+                            println!("{}", style(msg).yellow())
+                        });
+                    }
                 }
-            },
-            Action::Uninstall => match ctx.client.delete(resource_type, &resource.id) {
+            }
+            Action::Uninstall => match ctx.client.delete(resource_type, &resource.id).await {
                 Ok(()) => {
                     count += 1;
                 }
@@ -95,12 +97,12 @@ fn process_resources_type(
     count
 }
 
-fn process_resource(
+async fn process_resource(
     resource_type: &str,
     resource: &Resource,
     client: &FhirClient,
 ) -> anyhow::Result<()> {
     let payload = serde_json::to_string(&resource.data)?;
-    client.upsert(resource_type, &resource.id, &payload)?;
+    client.upsert(resource_type, &resource.id, &payload).await?;
     Ok(())
 }

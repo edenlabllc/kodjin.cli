@@ -40,7 +40,7 @@ impl Action {
     }
 }
 
-pub fn process_directory(ctx: InstallContext) -> anyhow::Result<()> {
+pub async fn process_directory(ctx: InstallContext) -> anyhow::Result<()> {
     let started_at = Instant::now();
 
     let bar = ProgressBar::new_spinner().with_message("Loading data");
@@ -66,7 +66,7 @@ pub fn process_directory(ctx: InstallContext) -> anyhow::Result<()> {
 
     println!("{} resources loaded", style(count).bold());
 
-    let processed_count = processor::process_resources(&ctx, resources);
+    let processed_count = processor::process_resources(&ctx, resources).await;
 
     println!(
         "Successfully processed {} resources in {}",

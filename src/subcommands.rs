@@ -9,7 +9,7 @@ use console::style;
 use indicatif::ProgressBar;
 use std::time::Duration;
 
-pub fn server(cmd: ServerCommand, mut config: Config) -> anyhow::Result<()> {
+pub async fn server(cmd: ServerCommand, mut config: Config) -> anyhow::Result<()> {
     match cmd {
         ServerCommand::List => {
             println!(
@@ -44,7 +44,7 @@ pub fn server(cmd: ServerCommand, mut config: Config) -> anyhow::Result<()> {
             bar.enable_steady_tick(Duration::from_millis(100));
 
             let client = FhirClient::new(url.clone());
-            let metadata = client.get_metadata()?;
+            let metadata = client.get_metadata().await?;
 
             config.servers.insert(name.clone(), ServerConfig { url });
 
@@ -93,11 +93,11 @@ pub fn server(cmd: ServerCommand, mut config: Config) -> anyhow::Result<()> {
     }
 }
 
-pub fn metadata(client: FhirClient) -> anyhow::Result<()> {
+pub async fn metadata(client: FhirClient) -> anyhow::Result<()> {
     let bar = ProgressBar::new_spinner().with_message("Fetching metadata");
     bar.enable_steady_tick(Duration::from_millis(100));
 
-    let metadata = client.get_metadata()?;
+    let metadata = client.get_metadata().await?;
 
     bar.finish_and_clear();
 
@@ -129,7 +129,7 @@ pub fn metadata(client: FhirClient) -> anyhow::Result<()> {
     Ok(())
 }
 
-pub fn install(cmd: InstallCommand, client: FhirClient) -> anyhow::Result<()> {
+pub async fn install(cmd: InstallCommand, client: FhirClient) -> anyhow::Result<()> {
     match cmd.r#type {
         InstallType::Package => todo!(),
         InstallType::Directory => {
@@ -138,14 +138,14 @@ pub fn install(cmd: InstallCommand, client: FhirClient) -> anyhow::Result<()> {
                 action: installer::Action::Install,
                 root_path: cmd.name.into(),
             };
-            installer::process_directory(ctx)?;
+            installer::process_directory(ctx).await?;
         }
     }
 
     Ok(())
 }
 
-pub fn uninstall(cmd: InstallCommand, client: FhirClient) -> anyhow::Result<()> {
+pub async fn uninstall(cmd: InstallCommand, client: FhirClient) -> anyhow::Result<()> {
     match cmd.r#type {
         InstallType::Package => todo!(),
         InstallType::Directory => {
@@ -154,7 +154,7 @@ pub fn uninstall(cmd: InstallCommand, client: FhirClient) -> anyhow::Result<()> 
                 action: installer::Action::Uninstall,
                 root_path: cmd.name.into(),
             };
-            installer::process_directory(ctx)?;
+            installer::process_directory(ctx).await?;
         }
     }
 
