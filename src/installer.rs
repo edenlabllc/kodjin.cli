@@ -124,7 +124,7 @@ fn load_file_list(path: &Path) -> anyhow::Result<Vec<PathBuf>> {
                 files.push(entry.path());
             }
         } else if metadata.is_dir() {
-            let subfiles = load_file_list(path)?;
+            let subfiles = load_file_list(&entry.path())?;
             files.extend(subfiles);
         }
     }
