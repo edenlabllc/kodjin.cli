@@ -5,6 +5,7 @@ use crate::client::FhirClient;
 use console::style;
 use indexmap::IndexMap;
 use indicatif::{ProgressBar, ProgressStyle};
+use serde_json::Value;
 
 const RESOURCE_TYPES_ORDER: &[&str] = &[
     "StructureDefinition",
@@ -62,13 +63,13 @@ async fn process_resources_type(
 
         match ctx.action {
             Action::Install => {
-                match process_resource(resource_type, &resource, &ctx.client).await {
+                let source_path = resource.source_path.clone();
+                match process_resource(resource_type, resource, &ctx.client, bar).await {
                     Ok(()) => count += 1,
                     Err(err) => {
                         bar.suspend(|| {
                             let msg = format!(
-                                "Warning: could not process file {:?}: {err:#}",
-                                resource.source_path
+                                "Warning: could not process file {source_path:?}: {err:#}",
                             );
                             println!("{}", style(msg).yellow())
                         });
@@ -99,10 +100,64 @@ async fn process_resources_type(
 
 async fn process_resource(
     resource_type: &str,
-    resource: &Resource,
+    mut resource: Resource,
     client: &FhirClient,
+    bar: &ProgressBar,
 ) -> anyhow::Result<()> {
-    let payload = serde_json::to_string(&resource.data)?;
-    client.upsert(resource_type, &resource.id, &payload).await?;
-    Ok(())
+    match client.get(resource_type, &resource.id).await? {
+        Some(mut existing_resource) => {
+            strip_resource(&mut existing_resource);
+            strip_resource(&mut resource.data);
+
+            if existing_resource == resource.data {
+                bar.suspend(|| {
+                    let msg = format!(
+                        "Resource {} is already up to date",
+                        style(format!("{resource_type} {}", resource.id)).bold()
+                    );
+                    println!("{}", style(msg).green());
+                });
+
+                Ok(())
+            } else {
+                let payload = serde_json::to_string(&resource.data)?;
+                client.upsert(resource_type, &resource.id, &payload).await?;
+
+                bar.suspend(|| {
+                    let msg = format!(
+                        "Updated {} differs from the version on server, updating",
+                        style(format!("{resource_type} {}", resource.id)).bold()
+                    );
+                    println!("{}", style(msg).green());
+                });
+
+                Ok(())
+            }
+        }
+        None => {
+            let payload = serde_json::to_string(&resource.data)?;
+            client.upsert(resource_type, &resource.id, &payload).await?;
+            bar.suspend(|| {
+                let msg = format!(
+                    "Created {}",
+                    style(format!("{resource_type} {}", resource.id)).bold()
+                );
+                println!("{}", style(msg).green());
+            });
+
+            Ok(())
+        }
+    }
+}
+
+/// Strip the resource of server-defined values such a `lastUpdated` and `versionId`
+fn strip_resource(data: &mut Value) {
+    if let Some(Value::Object(meta)) = data.get_mut("meta") {
+        meta.remove("lastUpdated");
+        meta.remove("versionId");
+
+        if meta.is_empty() {
+            data.as_object_mut().unwrap().remove("meta");
+        }
+    }
 }
