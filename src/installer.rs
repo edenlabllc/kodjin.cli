@@ -12,6 +12,12 @@ use std::{
     time::Instant,
 };
 
+pub struct InstallContext {
+    pub client: FhirClient,
+    pub action: Action,
+    pub root_path: PathBuf,
+}
+
 struct Resource {
     data: Value,
     id: String,
@@ -34,7 +40,7 @@ impl Action {
     }
 }
 
-pub fn process_directory(path: &Path, client: &FhirClient, action: Action) -> anyhow::Result<()> {
+pub fn process_directory(ctx: InstallContext) -> anyhow::Result<()> {
     let started_at = Instant::now();
 
     let bar = ProgressBar::new_spinner().with_message("Loading data");
@@ -42,9 +48,9 @@ pub fn process_directory(path: &Path, client: &FhirClient, action: Action) -> an
     // Grouped by resource type
     let mut resources: IndexMap<String, Vec<Resource>> = IndexMap::new();
 
-    let paths = load_file_list(path)?;
+    let paths = load_file_list(&ctx.root_path)?;
     for file_path in paths {
-        let relative_path = file_path.strip_prefix(path)?;
+        let relative_path = file_path.strip_prefix(&ctx.root_path)?;
         bar.set_message(format!("Reading file {}", relative_path.to_string_lossy()));
 
         if let Err(err) = load_file(&mut resources, &file_path, relative_path) {
@@ -60,7 +66,7 @@ pub fn process_directory(path: &Path, client: &FhirClient, action: Action) -> an
 
     println!("{} resources loaded", style(count).bold());
 
-    let processed_count = processor::process_resources(resources, client, action);
+    let processed_count = processor::process_resources(&ctx, resources);
 
     println!(
         "Successfully processed {} resources in {}",

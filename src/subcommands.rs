@@ -2,12 +2,12 @@ use crate::{
     args::{InstallCommand, InstallType, ServerCommand},
     client::FhirClient,
     config::{Config, ServerConfig},
-    installer,
+    installer::{self, InstallContext},
 };
 use anyhow::bail;
 use console::style;
 use indicatif::ProgressBar;
-use std::{path::PathBuf, time::Duration};
+use std::time::Duration;
 
 pub fn server(cmd: ServerCommand, mut config: Config) -> anyhow::Result<()> {
     match cmd {
@@ -133,8 +133,12 @@ pub fn install(cmd: InstallCommand, client: FhirClient) -> anyhow::Result<()> {
     match cmd.r#type {
         InstallType::Package => todo!(),
         InstallType::Directory => {
-            let path = PathBuf::from(cmd.name);
-            installer::process_directory(&path, &client, installer::Action::Install)?;
+            let ctx = InstallContext {
+                client,
+                action: installer::Action::Install,
+                root_path: cmd.name.into(),
+            };
+            installer::process_directory(ctx)?;
         }
     }
 
@@ -145,8 +149,12 @@ pub fn uninstall(cmd: InstallCommand, client: FhirClient) -> anyhow::Result<()> 
     match cmd.r#type {
         InstallType::Package => todo!(),
         InstallType::Directory => {
-            let path = PathBuf::from(cmd.name);
-            installer::process_directory(&path, &client, installer::Action::Uninstall)?;
+            let ctx = InstallContext {
+                client,
+                action: installer::Action::Uninstall,
+                root_path: cmd.name.into(),
+            };
+            installer::process_directory(ctx)?;
         }
     }
 

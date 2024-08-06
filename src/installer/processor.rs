@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use super::{Action, Resource};
+use super::{Action, InstallContext, Resource};
 use crate::client::FhirClient;
 use console::style;
 use indexmap::IndexMap;
@@ -15,14 +15,13 @@ const RESOURCE_TYPES_ORDER: &[&str] = &[
 ];
 
 pub fn process_resources(
+    ctx: &InstallContext,
     mut resources: IndexMap<String, Vec<Resource>>,
-    client: &FhirClient,
-    action: Action,
 ) -> usize {
     let count: usize = resources.values().map(|resources| resources.len()).sum();
 
-    let bar =
-        ProgressBar::new(count as u64).with_message(format!("{} resources", action.bar_prefix()));
+    let bar = ProgressBar::new(count as u64)
+        .with_message(format!("{} resources", ctx.action.bar_prefix()));
     bar.enable_steady_tick(Duration::from_millis(100));
     bar.set_style(ProgressStyle::with_template("{spinner} [{pos}/{len}] {msg}").unwrap());
 
@@ -31,14 +30,13 @@ pub fn process_resources(
     // First we process resources in the defined order
     for resource_type in RESOURCE_TYPES_ORDER {
         if let Some(resources) = resources.shift_remove(*resource_type) {
-            processed_count +=
-                process_resources_type(resource_type, resources, client, &bar, action);
+            processed_count += process_resources_type(ctx, resource_type, resources, &bar);
         }
     }
 
     // Process remaining resource types which were not in the list
     for (resource_type, resources) in resources.into_iter() {
-        processed_count += process_resources_type(&resource_type, resources, client, &bar, action);
+        processed_count += process_resources_type(ctx, &resource_type, resources, &bar);
     }
 
     bar.finish_and_clear();
@@ -48,23 +46,22 @@ pub fn process_resources(
 
 /// Returns the number of resources which were successfully uploaded
 fn process_resources_type(
+    ctx: &InstallContext,
     resource_type: &str,
     resources: Vec<Resource>,
-    client: &FhirClient,
     bar: &ProgressBar,
-    action: Action,
 ) -> usize {
     let mut count = 0;
 
     for resource in resources {
         bar.set_message(format!(
             "{} {resource_type} {}",
-            action.bar_prefix(),
+            ctx.action.bar_prefix(),
             resource.id
         ));
 
-        match action {
-            Action::Install => match process_resource(resource_type, &resource, client) {
+        match ctx.action {
+            Action::Install => match process_resource(resource_type, &resource, &ctx.client) {
                 Ok(()) => count += 1,
                 Err(err) => {
                     bar.suspend(|| {
@@ -76,7 +73,7 @@ fn process_resources_type(
                     });
                 }
             },
-            Action::Uninstall => match client.delete(resource_type, &resource.id) {
+            Action::Uninstall => match ctx.client.delete(resource_type, &resource.id) {
                 Ok(()) => {
                     count += 1;
                 }
