@@ -37,6 +37,10 @@ fn run(args: Args) -> anyhow::Result<()> {
             let client = get_client(&config, &args)?;
             subcommands::install(cmd, client)
         }
+        CliCommand::Uninstall(cmd) => {
+            let client = get_client(&config, &args)?;
+            subcommands::uninstall(cmd, client)
+        }
     }
 }
 

@@ -1,22 +1,16 @@
+mod processor;
+
 use crate::client::FhirClient;
 use anyhow::Context;
 use console::style;
+use indexmap::IndexMap;
 use indicatif::{HumanDuration, ProgressBar};
 use serde_json::Value;
 use std::{
-    collections::HashMap,
     fs,
     path::{Path, PathBuf},
     time::Instant,
 };
-
-const RESOURCE_TYPES_ORDER: &[&str] = &[
-    "StructureDefinition",
-    "SearchParameter",
-    "CodeSystem",
-    "ValueSet",
-    "ConceptMap",
-];
 
 struct Resource {
     data: Value,
@@ -25,13 +19,28 @@ struct Resource {
     source_path: PathBuf,
 }
 
-pub fn process_directory(path: &Path, client: &FhirClient) -> anyhow::Result<()> {
+#[derive(Clone, Copy)]
+pub enum Action {
+    Install,
+    Uninstall,
+}
+
+impl Action {
+    fn bar_prefix(&self) -> &str {
+        match self {
+            Action::Install => "Uploading",
+            Action::Uninstall => "Deleting",
+        }
+    }
+}
+
+pub fn process_directory(path: &Path, client: &FhirClient, action: Action) -> anyhow::Result<()> {
     let started_at = Instant::now();
 
     let bar = ProgressBar::new_spinner().with_message("Loading data");
 
     // Grouped by resource type
-    let mut resources: HashMap<String, Vec<Resource>> = HashMap::new();
+    let mut resources: IndexMap<String, Vec<Resource>> = IndexMap::new();
 
     let paths = load_file_list(path)?;
     for file_path in paths {
@@ -51,7 +60,7 @@ pub fn process_directory(path: &Path, client: &FhirClient) -> anyhow::Result<()>
 
     println!("{} resources loaded", style(count).bold());
 
-    let processed_count = process_resources(resources, client);
+    let processed_count = processor::process_resources(resources, client, action);
 
     println!(
         "Successfully processed {} resources in {}",
@@ -62,70 +71,8 @@ pub fn process_directory(path: &Path, client: &FhirClient) -> anyhow::Result<()>
     Ok(())
 }
 
-fn process_resources(mut resources: HashMap<String, Vec<Resource>>, client: &FhirClient) -> usize {
-    let bar = ProgressBar::new_spinner().with_message("Uploading resources");
-
-    let mut processed_count = 0;
-
-    // First we process resources in the defined order
-    for resource_type in RESOURCE_TYPES_ORDER {
-        if let Some(resources) = resources.remove(*resource_type) {
-            processed_count += process_resources_type(resource_type, resources, client, &bar);
-        }
-    }
-
-    // Process remaining resource types which were not in the list
-    for (resource_type, resources) in resources.into_iter() {
-        processed_count += process_resources_type(&resource_type, resources, client, &bar);
-    }
-
-    bar.finish_and_clear();
-
-    processed_count
-}
-
-/// Returns the number of resources which were successfully uploaded
-fn process_resources_type(
-    resource_type: &str,
-    resources: Vec<Resource>,
-    client: &FhirClient,
-    bar: &ProgressBar,
-) -> usize {
-    let mut count = 0;
-
-    for resource in resources {
-        bar.tick();
-        bar.set_message(format!("Uploading {resource_type} {}", resource.id));
-
-        match process_resource(resource_type, &resource, client) {
-            Ok(()) => count += 1,
-            Err(err) => {
-                bar.suspend(|| {
-                    let msg = format!(
-                        "Warning: could not process file {:?}: {err:#}",
-                        resource.source_path
-                    );
-                    println!("{}", style(msg).yellow())
-                });
-            }
-        }
-    }
-
-    count
-}
-
-fn process_resource(
-    resource_type: &str,
-    resource: &Resource,
-    client: &FhirClient,
-) -> anyhow::Result<()> {
-    let payload = serde_json::to_string(&resource.data)?;
-    client.upsert(resource_type, &resource.id, &payload)?;
-    Ok(())
-}
-
 fn load_file(
-    resources: &mut HashMap<String, Vec<Resource>>,
+    resources: &mut IndexMap<String, Vec<Resource>>,
     path: &Path,
     source_path: &Path,
 ) -> anyhow::Result<()> {

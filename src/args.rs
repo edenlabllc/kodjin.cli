@@ -20,6 +20,9 @@ pub enum CliCommand {
     Metadata,
     /// Install a FHIR package
     Install(InstallCommand),
+    /// Uninstall a FHIR package
+    #[command(alias = "remove")]
+    Uninstall(InstallCommand),
 }
 
 #[derive(Subcommand, Clone, Debug)]

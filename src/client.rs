@@ -2,8 +2,8 @@ mod capability_statement;
 
 use anyhow::{anyhow, Context};
 use capability_statement::CapabilityStatement;
-use serde::de::DeserializeOwned;
 use serde_json::Value;
+use ureq::Response;
 
 pub struct FhirClient {
     client: ureq::Agent,
@@ -19,12 +19,7 @@ impl FhirClient {
     }
 
     /// Standard FHIR JSON request
-    fn request<T: DeserializeOwned>(
-        &self,
-        method: &str,
-        path: &str,
-        body: Option<&str>,
-    ) -> anyhow::Result<T> {
+    fn request(&self, method: &str, path: &str, body: Option<&str>) -> anyhow::Result<Response> {
         let url = format!("{}{path}", self.base_url);
 
         let request = self.client.request(method, &url);
@@ -37,7 +32,7 @@ impl FhirClient {
         }
         .context("Request error")?;
 
-        if response.status() % 200 != 0 {
+        if !(200..300).contains(&response.status()) {
             // TODO extract error from body
             return Err(anyhow!(
                 "Got error code from server: {} {}",
@@ -46,15 +41,21 @@ impl FhirClient {
             ));
         }
 
-        let raw = response.into_string().context("Could not read response")?;
-        serde_json::from_str(&raw).context("Could not parse response")
+        Ok(response)
     }
 
     pub fn upsert(&self, resource_type: &str, id: &str, payload: &str) -> anyhow::Result<Value> {
-        self.request("PUT", &format!("/{resource_type}/{id}"), Some(payload))
+        Ok(self
+            .request("PUT", &format!("/{resource_type}/{id}"), Some(payload))?
+            .into_json()?)
+    }
+
+    pub fn delete(&self, resource_type: &str, id: &str) -> anyhow::Result<()> {
+        self.request("DELETE", &format!("/{resource_type}/{id}"), None)?;
+        Ok(())
     }
 
     pub fn get_metadata(&self) -> anyhow::Result<CapabilityStatement> {
-        self.request("GET", "/metadata", None)
+        Ok(self.request("GET", "/metadata", None)?.into_json()?)
     }
 }

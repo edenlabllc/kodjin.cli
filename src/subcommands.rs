@@ -134,7 +134,19 @@ pub fn install(cmd: InstallCommand, client: FhirClient) -> anyhow::Result<()> {
         InstallType::Package => todo!(),
         InstallType::Directory => {
             let path = PathBuf::from(cmd.name);
-            installer::process_directory(&path, &client)?;
+            installer::process_directory(&path, &client, installer::Action::Install)?;
+        }
+    }
+
+    Ok(())
+}
+
+pub fn uninstall(cmd: InstallCommand, client: FhirClient) -> anyhow::Result<()> {
+    match cmd.r#type {
+        InstallType::Package => todo!(),
+        InstallType::Directory => {
+            let path = PathBuf::from(cmd.name);
+            installer::process_directory(&path, &client, installer::Action::Uninstall)?;
         }
     }
 
