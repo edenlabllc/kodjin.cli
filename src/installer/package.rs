@@ -1,11 +1,11 @@
+use super::resource::ResourceInfo;
+use anyhow::Context;
+use serde::{de::DeserializeOwned, Deserialize};
 use std::{
     collections::HashMap,
     fs,
     path::{Path, PathBuf},
 };
-
-use anyhow::Context;
-use serde::{de::DeserializeOwned, Deserialize};
 
 pub struct FhirPackage {
     pub dir: PathBuf,
@@ -82,27 +82,6 @@ impl PackageIndexFile {
             PathBuf::from(path)
         } else {
             PathBuf::from("package").join(&self.filename)
-        }
-    }
-}
-
-#[derive(Deserialize, Debug, PartialEq, Eq)]
-#[serde(rename_all = "camelCase")]
-pub struct ResourceInfo {
-    pub resource_type: String,
-    pub id: String,
-    pub url: Option<String>,
-    pub version: Option<String>,
-}
-
-impl ResourceInfo {
-    pub fn canonical_url(&self) -> Option<String> {
-        match &self.url {
-            Some(url) => match &self.version {
-                Some(version) => Some(format!("{url}|{version}")),
-                None => Some(url.clone()),
-            },
-            None => None,
         }
     }
 }

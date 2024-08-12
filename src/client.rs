@@ -108,7 +108,10 @@ async fn handle_response_error(response: Response) -> anyhow::Result<Response> {
         let status = response.status();
         let body = response.text().await?;
         match serde_json::from_str::<OperationOutcome>(&body) {
-            Ok(outcome) => Err(anyhow!("FHIR error (status {status}): {outcome:#?}")),
+            Ok(outcome) => Err(anyhow!(
+                "FHIR error (status {status}): {}",
+                serde_json::to_string_pretty(&outcome).unwrap()
+            )),
             Err(_) => Err(anyhow!("Server error (status {status}): \"{body}\"")),
         }
     }

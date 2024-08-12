@@ -1,14 +1,15 @@
 use super::{
     package::{FhirPackage, PackageIndexFile},
-    Action, InstallContext, Resource,
+    resource::{Resource, ResourceInfo},
+    Action, InstallContext,
 };
-use crate::{client::FhirClient, installer::package::ResourceInfo};
+use crate::client::FhirClient;
 use console::style;
 use futures::{stream, StreamExt, TryStreamExt};
 use indexmap::IndexMap;
-use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
-use serde_json::Value;
+use indicatif::{ProgressBar, ProgressStyle};
 use std::time::Duration;
+use uuid::Uuid;
 
 const CONCURRENT_SEARCH_REQUESTS: usize = 20;
 const RESOURCE_TYPES_ORDER: &[&str] = &[
@@ -62,7 +63,7 @@ async fn process_resources_type(
         bar.set_message(format!(
             "{} {resource_type} {}",
             ctx.action.bar_prefix(),
-            resource.id
+            resource.info.id
         ));
 
         match ctx.action {
@@ -80,7 +81,11 @@ async fn process_resources_type(
                     }
                 }
             }
-            Action::Uninstall => match ctx.fhir_client.delete(resource_type, &resource.id).await {
+            Action::Uninstall => match ctx
+                .fhir_client
+                .delete(resource_type, &resource.info.id)
+                .await
+            {
                 Ok(()) => {
                     count += 1;
                 }
@@ -88,7 +93,7 @@ async fn process_resources_type(
                     bar.suspend(|| {
                         let msg = format!(
                             "Warning: could not delete resource {resource_type}/{}: {err:#}",
-                            resource.id
+                            resource.info.id
                         );
                         println!("{}", style(msg).yellow())
                     });
@@ -106,119 +111,70 @@ pub async fn process_resource(
     resource_type: &str,
     mut resource: Resource,
     client: &FhirClient,
-    bar: &ProgressBar,
+    _bar: &ProgressBar,
 ) -> anyhow::Result<()> {
-    match client.get(resource_type, &resource.id).await? {
-        Some(mut existing_resource) => {
-            strip_resource(&mut existing_resource);
-            strip_resource(&mut resource.data);
+    let exists = check_resource_installed(client, &resource.info).await?;
+    if !exists {
+        let id = Uuid::new_v4();
+        resource.set_id(id.to_string());
 
-            if existing_resource == resource.data {
-                // bar.suspend(|| {
-                //     println!(
-                //         "{} {} {}",
-                //         style(resource_type).bold(),
-                //         resource.id,
-                //         style("is already up to date").green(),
-                //     );
-                // });
-
-                Ok(())
-            } else {
-                let payload = serde_json::to_string(&resource.data)?;
-                client.upsert(resource_type, &resource.id, &payload).await?;
-
-                // bar.suspend(|| {
-                //     println!(
-                //         "{} {} {}",
-                //         style("Updated").green(),
-                //         style(resource_type).bold(),
-                //         resource.id
-                //     );
-                // });
-
-                Ok(())
-            }
-        }
-        None => {
-            let payload = serde_json::to_string(&resource.data)?;
-            client.upsert(resource_type, &resource.id, &payload).await?;
-            // bar.suspend(|| {
-            //     println!(
-            //         "{} {} {}",
-            //         style("Created").green(),
-            //         style(resource_type).bold(),
-            //         resource.id
-            //     );
-            // });
-
-            Ok(())
-        }
+        let payload = serde_json::to_string(&resource.data)?;
+        client
+            .upsert(resource_type, &resource.info.id, &payload)
+            .await?;
     }
+
+    Ok(())
 }
 
 /// Strip the resource of server-defined values such a `lastUpdated` and `versionId`
-fn strip_resource(data: &mut Value) {
-    if let Some(Value::Object(meta)) = data.get_mut("meta") {
-        meta.remove("lastUpdated");
-        meta.remove("versionId");
+// fn strip_resource(data: &mut Value) {
+//     if let Some(Value::Object(meta)) = data.get_mut("meta") {
+//         meta.remove("lastUpdated");
+//         meta.remove("versionId");
 
-        if meta.is_empty() {
-            data.as_object_mut().unwrap().remove("meta");
-        }
-    }
-}
+//         if meta.is_empty() {
+//             data.as_object_mut().unwrap().remove("meta");
+//         }
+//     }
+// }
 
 pub async fn check_package_installed(
     package: &FhirPackage,
     client: &FhirClient,
-    progress: &MultiProgress,
+    // progress: &MultiProgress,
+    total_progress: &ProgressBar,
 ) -> anyhow::Result<PackageInstallStatus> {
     let index = package.read_index()?;
 
-    let total_progress = progress
-        .add(
-            ProgressBar::new(index.files.len() as u64).with_style(
-                ProgressStyle::with_template("{spinner} {pos}/{len} {msg} [{wide_bar}]")
-                    .unwrap()
-                    .progress_chars("#>-"),
-            ),
-        )
-        .with_message("Checking resources");
+    total_progress.set_length(index.files.len() as u64);
+    total_progress.set_message("Checking resources");
+    // total_progress.set_style(
+    //     ProgressStyle::with_template(&format!("{spinner} {}: [{pos}/{len}] {msg} [{wide_bar}]")
+    //         .unwrap()
+    //         .progress_chars("#>-"),
+    // );
+    // let total_progress = progress
+    // // .add(
+    //     ProgressBar::new(index.files.len() as u64).with_style(
+    //         ProgressStyle::with_template("{spinner} [{pos}/{len}] {msg} [{wide_bar}]")
+    //             .unwrap()
+    //             .progress_chars("#>-"),
+    //     ),
+    // )
+    // .with_message("Checking resources");
 
     let requests = index.files.into_iter().map(|file| async {
-        let bar = progress.add(
-            ProgressBar::new_spinner()
-                .with_message(format!("Checking {}", style(&file.filename).bold())),
-        );
+        // let bar = progress.add(
+        //     ProgressBar::new_spinner()
+        //         .with_message(format!("Checking {}", style(&file.filename).bold())),
+        // );
 
-        bar.enable_steady_tick(Duration::from_millis(100));
+        // bar.enable_steady_tick(Duration::from_millis(100));
 
-        let mut search_params: Vec<(&str, &str)> = vec![];
-        if let Some(url) = &file.resource_info.url {
-            search_params.push(("url", url));
+        let exists = check_resource_installed(client, &file.resource_info).await?;
 
-            if let Some(version) = &file.resource_info.version {
-                search_params.push(("version", version));
-            }
-        } else {
-            search_params.push(("_id", &file.resource_info.id));
-        }
-
-        let bundle = client
-            .search::<ResourceInfo>(&file.resource_info.resource_type, &search_params)
-            .await?;
-
-        let exists = bundle.entry.iter().any(|entry| {
-            entry.resource.as_ref().is_some_and(|resource| {
-                (resource.url.is_some()
-                    && resource.url == file.resource_info.url
-                    && resource.version == file.resource_info.version)
-                    || (file.resource_info.url.is_none() && resource.id == file.resource_info.id)
-            })
-        });
-
-        bar.finish_and_clear();
+        // bar.finish_and_clear();
 
         total_progress.inc(1);
 
@@ -235,7 +191,7 @@ pub async fn check_package_installed(
         .try_collect::<Vec<_>>()
         .await?;
 
-    total_progress.finish_and_clear();
+    total_progress.reset();
 
     if missing.is_empty() {
         Ok(PackageInstallStatus::Installed)
@@ -247,4 +203,35 @@ pub async fn check_package_installed(
 pub enum PackageInstallStatus {
     Installed,
     NotInstalled(Vec<PackageIndexFile>),
+}
+
+async fn check_resource_installed(
+    client: &FhirClient,
+    resource_info: &ResourceInfo,
+) -> anyhow::Result<bool> {
+    let mut search_params: Vec<(&str, &str)> = vec![];
+    if let Some(url) = &resource_info.url {
+        search_params.push(("url", url));
+
+        if let Some(version) = &resource_info.version {
+            search_params.push(("version", version));
+        }
+    } else {
+        search_params.push(("_id", &resource_info.id));
+    }
+
+    let bundle = client
+        .search::<ResourceInfo>(&resource_info.resource_type, &search_params)
+        .await?;
+
+    let exists = bundle.entry.iter().any(|entry| {
+        entry.resource.as_ref().is_some_and(|resource| {
+            (resource.url.is_some()
+                && resource.url == resource_info.url
+                && resource.version == resource_info.version)
+                || (resource_info.url.is_none() && resource.id == resource_info.id)
+        })
+    });
+
+    Ok(exists)
 }

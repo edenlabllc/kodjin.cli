@@ -3,17 +3,17 @@ use serde::Deserialize;
 #[derive(Debug, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Bundle<T> {
-    pub r#type: BundleType,
+    // pub r#type: BundleType,
     #[serde(
         default = "Vec::<BundleEntry<T>>::new",
         skip_serializing_if = "Vec::is_empty"
     )]
     pub entry: Vec<BundleEntry<T>>,
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub link: Vec<Link>,
-    pub id: Option<String>,
-    pub language: Option<String>,
-    pub timestamp: Option<String>,
+    // #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    // pub link: Vec<Link>,
+    // pub id: Option<String>,
+    // pub language: Option<String>,
+    // pub timestamp: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Clone, Copy)]
@@ -38,11 +38,11 @@ pub struct BundleEntry<T> {
     pub search: Option<EntrySearch>,
 }
 
-#[derive(Debug, Deserialize, Clone)]
-pub struct Link {
-    pub relation: String,
-    pub url: String,
-}
+// #[derive(Debug, Deserialize, Clone)]
+// pub struct Link {
+//     pub relation: String,
+//     pub url: String,
+// }
 
 #[derive(Debug, Deserialize, Clone, PartialEq)]
 pub struct EntrySearch {

@@ -1,6 +1,9 @@
 mod downloader;
 mod package;
 mod processor;
+mod resource;
+
+const BASE_PACKAGE: &str = "hl7.fhir.r4.core";
 
 use crate::{client::FhirClient, registry::RegistryClient};
 use anyhow::Context;
@@ -10,8 +13,9 @@ use deno_semver::package::PackageReq;
 use futures::future::{try_join_all, BoxFuture};
 use indexmap::IndexMap;
 use indicatif::{HumanDuration, MultiProgress, ProgressBar, ProgressStyle};
-use package::{FhirPackage, PackageIndex, PackageIndexFile, PackageManifest};
+use package::{FhirPackage, PackageIndexFile, PackageManifest};
 use processor::PackageInstallStatus;
+use resource::{Resource, ResourceInfo};
 use serde_json::Value;
 use std::{
     collections::HashSet,
@@ -26,13 +30,6 @@ use tokio::sync::Semaphore;
 pub struct InstallContext<'a> {
     pub fhir_client: &'a FhirClient,
     pub action: Action,
-}
-
-struct Resource {
-    data: Value,
-    id: String,
-    /// Relative path where the resource was loaded from
-    source_path: PathBuf,
 }
 
 #[derive(Clone, Copy)]
@@ -59,6 +56,7 @@ pub fn install_package<'a>(
     semaphore: &'a Semaphore,
 ) -> BoxFuture<'a, anyhow::Result<()>> {
     // Avoid processing the same package twice
+    // TODO: this should wait via a channel
     if !current_packages.lock().unwrap().insert(package.clone()) {
         return Box::pin(async { Ok(()) });
     }
@@ -67,6 +65,11 @@ pub fn install_package<'a>(
 
     Box::pin(async move {
         let package_req = PackageReq::from_str(&package).context("Invalid package request")?;
+
+        // Assume the base package is always installed
+        if package_req.name == BASE_PACKAGE {
+            return Ok(());
+        }
 
         let bar_style = ProgressStyle::with_template(&format!(
             "{{spinner}} {}: {{msg}}",
@@ -108,8 +111,32 @@ pub fn install_package<'a>(
 
         try_join_all(dependency_tasks).await?;
 
-        let index = package.read_index()?;
-        process_files_from_index(ctx, &package, manifest, index, &bar).await?;
+        bar.set_style(
+            ProgressStyle::with_template(&format!(
+                "{{spinner}} {}: {{wide_msg}} [{{pos}}/{{len}}]",
+                style(&package_req).bold()
+            ))
+            .unwrap(),
+        );
+        // bar.set_style(
+        //     ProgressStyle::with_template(&format!(
+        //         "{{spinner}} {}: {{msg}} [{{wide_bar}}] [{{pos}}/{{len}}]",
+        //         style(&package_req).bold()
+        //     ))
+        //     .unwrap()
+        //     .progress_chars("#>-"),
+        // );
+
+        let install_status =
+            processor::check_package_installed(&package, ctx.fhir_client, &bar).await?;
+
+        if let PackageInstallStatus::NotInstalled(files) = install_status {
+            let index = package.read_index()?;
+
+            bar.set_length(index.files.len() as u64);
+
+            process_files(ctx, &package, manifest, files, &bar).await?;
+        }
 
         Ok(())
     })
@@ -132,15 +159,15 @@ async fn resolve_version_info(
     Ok((package_info, version_info))
 }
 
-async fn process_files_from_index(
+async fn process_files(
     ctx: InstallContext<'_>,
     package: &FhirPackage,
     manifest: PackageManifest,
-    index: PackageIndex,
+    files: Vec<PackageIndexFile>,
     bar: &ProgressBar,
     // progress: &MultiProgress,
 ) -> anyhow::Result<()> {
-    for file in index.files {
+    for file in files {
         bar.set_message(format!(
             "{} {} {}",
             ctx.action.bar_prefix(),
@@ -168,7 +195,7 @@ async fn process_files_from_index(
 
         let resource = Resource {
             data,
-            id: file.resource_info.id,
+            info: file.resource_info.clone(),
             source_path: file_path.clone(),
         };
 
@@ -193,6 +220,7 @@ async fn process_files_from_index(
                 })
             }
         }
+        bar.inc(1);
     }
 
     Ok(())
@@ -241,25 +269,13 @@ fn load_file(
     source_path: &Path,
 ) -> anyhow::Result<()> {
     let contents = fs::read_to_string(path)?;
+    let info: ResourceInfo = serde_json::from_str(&contents)?;
     let data: Value = serde_json::from_str(&contents)?;
 
-    let resource_type = data
-        .get("resourceType")
-        .context("Resource has no \"resourceType\" field")?
-        .as_str()
-        .context("\"resourceType\" is not a string")?
-        .to_owned();
-
-    let id = data
-        .get("id")
-        .context("Resource has no id")?
-        .as_str()
-        .context("Resource id is not a string")?
-        .to_owned();
-
+    let resource_type = info.resource_type.clone();
     let resource = Resource {
         data,
-        id,
+        info,
         source_path: source_path.to_owned(),
     };
 
@@ -316,11 +332,15 @@ pub async fn check_package_installed(
     )
     .await?;
 
-    bar.finish_and_clear();
     let progress = MultiProgress::new();
+    let bar = progress.add(bar);
+    bar.set_style(
+        ProgressStyle::with_template("{spinner} [{pos}/{len}] {msg} [{wide_bar}]")
+            .unwrap()
+            .progress_chars("#>-"),
+    );
 
-    let status =
-        processor::check_package_installed(&fhir_package, ctx.fhir_client, &progress).await?;
+    let status = processor::check_package_installed(&fhir_package, ctx.fhir_client, &bar).await?;
     progress.clear()?;
 
     match status {
@@ -334,10 +354,15 @@ pub async fn check_package_installed(
         PackageInstallStatus::NotInstalled(missing) => {
             let index = fhir_package.read_index()?;
 
+            let installed_text = if missing.len() == index.files.len() {
+                style("not installed").red()
+            } else {
+                style("partially installed").yellow()
+            };
+
             println!(
-                "Package {} is {} ({}/{} resources missing)",
+                "Package {} is {installed_text} ({}/{} resources missing)",
                 style(&package_req).bold(),
-                style("not installed").red(),
                 missing.len(),
                 index.files.len(),
             );
