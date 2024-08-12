@@ -3,13 +3,19 @@ use crate::{
     client::FhirClient,
     config::{Config, ServerConfig},
     installer::{self, InstallContext},
+    registry::RegistryClient,
 };
 use anyhow::bail;
 use console::style;
-use indicatif::ProgressBar;
-use std::time::Duration;
+use indicatif::{MultiProgress, ProgressBar};
+use std::{collections::HashSet, path::PathBuf, sync::Mutex, time::Duration};
+use tokio::sync::Semaphore;
 
-pub async fn server(cmd: ServerCommand, mut config: Config) -> anyhow::Result<()> {
+pub async fn server(
+    cmd: ServerCommand,
+    mut config: Config,
+    insecure_certificates: bool,
+) -> anyhow::Result<()> {
     match cmd {
         ServerCommand::List => {
             println!(
@@ -43,7 +49,7 @@ pub async fn server(cmd: ServerCommand, mut config: Config) -> anyhow::Result<()
             let bar = ProgressBar::new_spinner().with_message(format!("Checking server {url}"));
             bar.enable_steady_tick(Duration::from_millis(100));
 
-            let client = FhirClient::new(url.clone());
+            let client = FhirClient::new(url.clone(), insecure_certificates);
             let metadata = client.get_metadata().await?;
 
             config.servers.insert(name.clone(), ServerConfig { url });
@@ -130,15 +136,30 @@ pub async fn metadata(client: FhirClient) -> anyhow::Result<()> {
 }
 
 pub async fn install(cmd: InstallCommand, client: FhirClient) -> anyhow::Result<()> {
+    let ctx = InstallContext {
+        fhir_client: &client,
+        action: installer::Action::Install,
+    };
+
     match cmd.r#type {
-        InstallType::Package => todo!(),
+        InstallType::Package => {
+            let multi_progress = MultiProgress::new();
+            let semaphore = Semaphore::new(5);
+
+            let packages = Mutex::new(HashSet::new());
+            let registry_client = RegistryClient::new(cmd.registry);
+            installer::install_package(
+                ctx,
+                &registry_client,
+                cmd.name,
+                &multi_progress,
+                &packages,
+                &semaphore,
+            )
+            .await?;
+        }
         InstallType::Directory => {
-            let ctx = InstallContext {
-                client,
-                action: installer::Action::Install,
-                root_path: cmd.name.into(),
-            };
-            installer::process_directory(ctx).await?;
+            installer::process_directory(ctx, &PathBuf::from(cmd.name)).await?;
         }
     }
 
@@ -146,15 +167,30 @@ pub async fn install(cmd: InstallCommand, client: FhirClient) -> anyhow::Result<
 }
 
 pub async fn uninstall(cmd: InstallCommand, client: FhirClient) -> anyhow::Result<()> {
+    let ctx = InstallContext {
+        fhir_client: &client,
+        action: installer::Action::Uninstall,
+    };
+
     match cmd.r#type {
-        InstallType::Package => todo!(),
+        InstallType::Package => {
+            let multi_progress = MultiProgress::new();
+            let semaphore = Semaphore::new(5);
+
+            let packages = Mutex::new(HashSet::new());
+            let registry_client = RegistryClient::new(cmd.registry);
+            installer::install_package(
+                ctx,
+                &registry_client,
+                cmd.name,
+                &multi_progress,
+                &packages,
+                &semaphore,
+            )
+            .await?;
+        }
         InstallType::Directory => {
-            let ctx = InstallContext {
-                client,
-                action: installer::Action::Uninstall,
-                root_path: cmd.name.into(),
-            };
-            installer::process_directory(ctx).await?;
+            installer::process_directory(ctx, &PathBuf::from(cmd.name)).await?;
         }
     }
 

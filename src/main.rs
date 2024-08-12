@@ -3,6 +3,7 @@ mod client;
 mod config;
 mod installer;
 mod registry;
+mod storage;
 mod subcommands;
 
 use anyhow::Context;
@@ -30,7 +31,9 @@ async fn run(args: Args) -> anyhow::Result<()> {
     let config = Config::load_or_create()?;
 
     match args.command.clone() {
-        CliCommand::Server(cmd) => subcommands::server(cmd, config).await,
+        CliCommand::Server(cmd) => {
+            subcommands::server(cmd, config, args.insecure_certificates).await
+        }
         CliCommand::Metadata => {
             let client = get_client(&config, &args)?;
             subcommands::metadata(client).await
@@ -59,5 +62,8 @@ fn get_client(config: &Config, args: &Args) -> anyhow::Result<FhirClient> {
         None => config.get_current_server()?,
     };
 
-    Ok(FhirClient::new(server_config.url.clone()))
+    Ok(FhirClient::new(
+        server_config.url.clone(),
+        args.insecure_certificates,
+    ))
 }

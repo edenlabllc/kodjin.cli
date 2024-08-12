@@ -16,7 +16,7 @@ const RESOURCE_TYPES_ORDER: &[&str] = &[
 ];
 
 pub async fn process_resources(
-    ctx: &InstallContext,
+    ctx: InstallContext<'_>,
     mut resources: IndexMap<String, Vec<Resource>>,
 ) -> usize {
     let count: usize = resources.values().map(|resources| resources.len()).sum();
@@ -47,7 +47,7 @@ pub async fn process_resources(
 
 /// Returns the number of resources which were successfully uploaded
 async fn process_resources_type(
-    ctx: &InstallContext,
+    ctx: InstallContext<'_>,
     resource_type: &str,
     resources: Vec<Resource>,
     bar: &ProgressBar,
@@ -64,7 +64,7 @@ async fn process_resources_type(
         match ctx.action {
             Action::Install => {
                 let source_path = resource.source_path.clone();
-                match process_resource(resource_type, resource, &ctx.client, bar).await {
+                match process_resource(resource_type, resource, ctx.fhir_client, bar).await {
                     Ok(()) => count += 1,
                     Err(err) => {
                         bar.suspend(|| {
@@ -76,7 +76,7 @@ async fn process_resources_type(
                     }
                 }
             }
-            Action::Uninstall => match ctx.client.delete(resource_type, &resource.id).await {
+            Action::Uninstall => match ctx.fhir_client.delete(resource_type, &resource.id).await {
                 Ok(()) => {
                     count += 1;
                 }
@@ -98,7 +98,7 @@ async fn process_resources_type(
     count
 }
 
-async fn process_resource(
+pub async fn process_resource(
     resource_type: &str,
     mut resource: Resource,
     client: &FhirClient,
@@ -110,26 +110,28 @@ async fn process_resource(
             strip_resource(&mut resource.data);
 
             if existing_resource == resource.data {
-                bar.suspend(|| {
-                    let msg = format!(
-                        "Resource {} is already up to date",
-                        style(format!("{resource_type} {}", resource.id)).bold()
-                    );
-                    println!("{}", style(msg).green());
-                });
+                // bar.suspend(|| {
+                //     println!(
+                //         "{} {} {}",
+                //         style(resource_type).bold(),
+                //         resource.id,
+                //         style("is already up to date").green(),
+                //     );
+                // });
 
                 Ok(())
             } else {
                 let payload = serde_json::to_string(&resource.data)?;
                 client.upsert(resource_type, &resource.id, &payload).await?;
 
-                bar.suspend(|| {
-                    let msg = format!(
-                        "Updated {} differs from the version on server, updating",
-                        style(format!("{resource_type} {}", resource.id)).bold()
-                    );
-                    println!("{}", style(msg).green());
-                });
+                // bar.suspend(|| {
+                //     println!(
+                //         "{} {} {}",
+                //         style("Updated").green(),
+                //         style(resource_type).bold(),
+                //         resource.id
+                //     );
+                // });
 
                 Ok(())
             }
@@ -137,13 +139,14 @@ async fn process_resource(
         None => {
             let payload = serde_json::to_string(&resource.data)?;
             client.upsert(resource_type, &resource.id, &payload).await?;
-            bar.suspend(|| {
-                let msg = format!(
-                    "Created {}",
-                    style(format!("{resource_type} {}", resource.id)).bold()
-                );
-                println!("{}", style(msg).green());
-            });
+            // bar.suspend(|| {
+            //     println!(
+            //         "{} {} {}",
+            //         style("Created").green(),
+            //         style(resource_type).bold(),
+            //         resource.id
+            //     );
+            // });
 
             Ok(())
         }

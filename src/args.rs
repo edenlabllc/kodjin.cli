@@ -9,6 +9,9 @@ pub struct Args {
     /// The default one will be used if not specified.
     #[clap(short, long)]
     pub server: Option<String>,
+    /// Skip TLS certificate validation
+    #[clap(long, default_value_t = false)]
+    pub insecure_certificates: bool,
 }
 
 #[derive(Subcommand, Clone, Debug)]
