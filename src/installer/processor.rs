@@ -1,12 +1,16 @@
+use super::{
+    package::{FhirPackage, PackageIndexFile},
+    Action, InstallContext, Resource,
+};
+use crate::{client::FhirClient, installer::package::ResourceInfo};
+use console::style;
+use futures::{stream, StreamExt, TryStreamExt};
+use indexmap::IndexMap;
+use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
+use serde_json::Value;
 use std::time::Duration;
 
-use super::{Action, InstallContext, Resource};
-use crate::client::FhirClient;
-use console::style;
-use indexmap::IndexMap;
-use indicatif::{ProgressBar, ProgressStyle};
-use serde_json::Value;
-
+const CONCURRENT_SEARCH_REQUESTS: usize = 20;
 const RESOURCE_TYPES_ORDER: &[&str] = &[
     "StructureDefinition",
     "SearchParameter",
@@ -163,4 +167,84 @@ fn strip_resource(data: &mut Value) {
             data.as_object_mut().unwrap().remove("meta");
         }
     }
+}
+
+pub async fn check_package_installed(
+    package: &FhirPackage,
+    client: &FhirClient,
+    progress: &MultiProgress,
+) -> anyhow::Result<PackageInstallStatus> {
+    let index = package.read_index()?;
+
+    let total_progress = progress
+        .add(
+            ProgressBar::new(index.files.len() as u64).with_style(
+                ProgressStyle::with_template("{spinner} {pos}/{len} {msg} [{wide_bar}]")
+                    .unwrap()
+                    .progress_chars("#>-"),
+            ),
+        )
+        .with_message("Checking resources");
+
+    let requests = index.files.into_iter().map(|file| async {
+        let bar = progress.add(
+            ProgressBar::new_spinner()
+                .with_message(format!("Checking {}", style(&file.filename).bold())),
+        );
+
+        bar.enable_steady_tick(Duration::from_millis(100));
+
+        let mut search_params: Vec<(&str, &str)> = vec![];
+        if let Some(url) = &file.resource_info.url {
+            search_params.push(("url", url));
+
+            if let Some(version) = &file.resource_info.version {
+                search_params.push(("version", version));
+            }
+        } else {
+            search_params.push(("_id", &file.resource_info.id));
+        }
+
+        let bundle = client
+            .search::<ResourceInfo>(&file.resource_info.resource_type, &search_params)
+            .await?;
+
+        let exists = bundle.entry.iter().any(|entry| {
+            entry.resource.as_ref().is_some_and(|resource| {
+                (resource.url.is_some()
+                    && resource.url == file.resource_info.url
+                    && resource.version == file.resource_info.version)
+                    || (file.resource_info.url.is_none() && resource.id == file.resource_info.id)
+            })
+        });
+
+        bar.finish_and_clear();
+
+        total_progress.inc(1);
+
+        anyhow::Ok((file, exists))
+    });
+
+    let missing = stream::iter(requests)
+        .buffer_unordered(CONCURRENT_SEARCH_REQUESTS)
+        .try_filter(|(_, exists)| {
+            let exists = *exists;
+            async move { !exists }
+        })
+        .map_ok(|(file, _)| file)
+        .try_collect::<Vec<_>>()
+        .await?;
+
+    total_progress.finish_and_clear();
+
+    if missing.is_empty() {
+        Ok(PackageInstallStatus::Installed)
+    } else {
+        Ok(PackageInstallStatus::NotInstalled(missing))
+    }
+}
+
+pub enum PackageInstallStatus {
+    Installed,
+    NotInstalled(Vec<PackageIndexFile>),
 }

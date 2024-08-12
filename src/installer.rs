@@ -5,11 +5,13 @@ mod processor;
 use crate::{client::FhirClient, registry::RegistryClient};
 use anyhow::Context;
 use console::style;
+use deno_npm::registry::{NpmPackageInfo, NpmPackageVersionInfo};
 use deno_semver::package::PackageReq;
 use futures::future::{try_join_all, BoxFuture};
 use indexmap::IndexMap;
 use indicatif::{HumanDuration, MultiProgress, ProgressBar, ProgressStyle};
-use package::{FhirPackage, PackageIndex, PackageManifest};
+use package::{FhirPackage, PackageIndex, PackageIndexFile, PackageManifest};
+use processor::PackageInstallStatus;
 use serde_json::Value;
 use std::{
     collections::HashSet,
@@ -76,16 +78,8 @@ pub fn install_package<'a>(
             .with_style(bar_style.clone());
         let bar = progress.add(bar);
 
-        let package_info = registry_client.package_info(&package_req.name).await?;
-        let mut versions = package_info.versions.keys().collect::<Vec<_>>();
-        versions.sort_unstable();
-
-        let matching_version = versions
-            .into_iter()
-            .rev()
-            .find(|version| package_req.version_req.matches(version))
-            .with_context(|| "Could not find matching package \"{package}\"")?;
-        let version_info = package_info.versions.get(matching_version).unwrap();
+        let (_package_info, version_info) =
+            resolve_version_info(&package_req, registry_client).await?;
 
         let package = downloader::download_package(
             registry_client,
@@ -121,6 +115,23 @@ pub fn install_package<'a>(
     })
 }
 
+async fn resolve_version_info(
+    package_req: &PackageReq,
+    registry_client: &RegistryClient,
+) -> anyhow::Result<(NpmPackageInfo, NpmPackageVersionInfo)> {
+    let package_info = registry_client.package_info(&package_req.name).await?;
+    let mut versions = package_info.versions.keys().collect::<Vec<_>>();
+    versions.sort_unstable();
+
+    let matching_version = versions
+        .into_iter()
+        .rev()
+        .find(|version| package_req.version_req.matches(version))
+        .with_context(|| "Could not find matching package \"{package}\"")?;
+    let version_info = package_info.versions.get(matching_version).unwrap().clone();
+    Ok((package_info, version_info))
+}
+
 async fn process_files_from_index(
     ctx: InstallContext<'_>,
     package: &FhirPackage,
@@ -133,8 +144,8 @@ async fn process_files_from_index(
         bar.set_message(format!(
             "{} {} {}",
             ctx.action.bar_prefix(),
-            file.resource_type,
-            file.id
+            file.resource_info.resource_type,
+            file.resource_info.id
         ));
 
         let file_path = file.get_path();
@@ -157,11 +168,17 @@ async fn process_files_from_index(
 
         let resource = Resource {
             data,
-            id: file.id,
+            id: file.resource_info.id,
             source_path: file_path.clone(),
         };
 
-        match processor::process_resource(&file.resource_type, resource, ctx.fhir_client, bar).await
+        match processor::process_resource(
+            &file.resource_info.resource_type,
+            resource,
+            ctx.fhir_client,
+            bar,
+        )
+        .await
         {
             Ok(()) => (),
             Err(err) => {
@@ -271,4 +288,83 @@ fn load_file_list(path: &Path) -> anyhow::Result<Vec<PathBuf>> {
     }
 
     Ok(files)
+}
+
+pub async fn check_package_installed(
+    ctx: InstallContext<'_>,
+    registry_client: &RegistryClient,
+    package: &str,
+) -> anyhow::Result<()> {
+    let package_req = PackageReq::from_str(package)?;
+
+    let bar_style = ProgressStyle::with_template(&format!(
+        "{{spinner}} {}: {{msg}}",
+        style(&package_req).bold()
+    ))
+    .unwrap();
+    let bar = ProgressBar::new_spinner()
+        .with_message("Fetching package info")
+        .with_style(bar_style.clone());
+
+    let (_package_info, version_info) = resolve_version_info(&package_req, registry_client).await?;
+
+    let fhir_package = downloader::download_package(
+        registry_client,
+        package_req.name.clone(),
+        version_info,
+        bar.clone(),
+    )
+    .await?;
+
+    bar.finish_and_clear();
+    let progress = MultiProgress::new();
+
+    let status =
+        processor::check_package_installed(&fhir_package, ctx.fhir_client, &progress).await?;
+    progress.clear()?;
+
+    match status {
+        PackageInstallStatus::Installed => {
+            println!(
+                "Package {} is {}",
+                style(&package_req).bold(),
+                style("already installed").green()
+            );
+        }
+        PackageInstallStatus::NotInstalled(missing) => {
+            let index = fhir_package.read_index()?;
+
+            println!(
+                "Package {} is {} ({}/{} resources missing)",
+                style(&package_req).bold(),
+                style("not installed").red(),
+                missing.len(),
+                index.files.len(),
+            );
+            println!("The following files are missing:");
+
+            // Group by resource type for better output first
+            let mut resource_types: IndexMap<&str, Vec<&PackageIndexFile>> = IndexMap::new();
+            for file in &missing {
+                resource_types
+                    .entry(&file.resource_info.resource_type)
+                    .or_default()
+                    .push(file);
+            }
+
+            for (resource_type, files) in resource_types {
+                println!("{resource_type}:");
+
+                for file in files {
+                    if let Some(canonical_url) = file.resource_info.canonical_url() {
+                        println!("- {} ({})", file.filename, style(canonical_url).bold());
+                    } else {
+                        println!("- {}", file.filename,);
+                    }
+                }
+            }
+        }
+    }
+
+    Ok(())
 }

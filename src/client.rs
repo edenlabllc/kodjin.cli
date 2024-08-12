@@ -1,17 +1,20 @@
+mod bundle;
 mod capability_statement;
 mod codeable_concept;
 mod coding;
 mod operation_outcome;
 
 use anyhow::anyhow;
+use bundle::Bundle;
 use capability_statement::CapabilityStatement;
 use operation_outcome::OperationOutcome;
 use reqwest::{
     header::{HeaderValue, CONTENT_TYPE},
     Method, RequestBuilder, Response, StatusCode,
 };
+use serde::de::DeserializeOwned;
 use serde_json::Value;
-use std::{fs::OpenOptions, sync::Arc};
+use std::sync::Arc;
 
 #[derive(Clone)]
 pub struct FhirClient {
@@ -65,6 +68,20 @@ impl FhirClient {
         }
     }
 
+    pub async fn search<T: DeserializeOwned>(
+        &self,
+        resource_type: &str,
+        params: &[(&str, &str)],
+    ) -> anyhow::Result<Bundle<T>> {
+        let response = self
+            .request(Method::GET, &format!("/{resource_type}"))
+            .query(params)
+            .send()
+            .await?;
+        let bundle = handle_response_error(response).await?.json().await?;
+        Ok(bundle)
+    }
+
     pub async fn delete(&self, resource_type: &str, id: &str) -> anyhow::Result<()> {
         self.request(Method::DELETE, &format!("/{resource_type}/{id}"))
             .send()
@@ -92,7 +109,7 @@ async fn handle_response_error(response: Response) -> anyhow::Result<Response> {
         let body = response.text().await?;
         match serde_json::from_str::<OperationOutcome>(&body) {
             Ok(outcome) => Err(anyhow!("FHIR error (status {status}): {outcome:#?}")),
-            Err(_) => Err(anyhow!("Server error: \"{body}\"")),
+            Err(_) => Err(anyhow!("Server error (status {status}): \"{body}\"")),
         }
     }
 }

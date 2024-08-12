@@ -196,3 +196,22 @@ pub async fn uninstall(cmd: InstallCommand, client: FhirClient) -> anyhow::Resul
 
     Ok(())
 }
+
+pub async fn check(cmd: InstallCommand, client: FhirClient) -> anyhow::Result<()> {
+    let ctx = InstallContext {
+        fhir_client: &client,
+        action: installer::Action::Uninstall,
+    };
+
+    match cmd.r#type {
+        InstallType::Package => {
+            let registry_client = RegistryClient::new(cmd.registry);
+            installer::check_package_installed(ctx, &registry_client, &cmd.name).await?;
+        }
+        InstallType::Directory => {
+            todo!()
+        }
+    }
+
+    Ok(())
+}

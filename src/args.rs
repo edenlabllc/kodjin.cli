@@ -26,6 +26,8 @@ pub enum CliCommand {
     /// Uninstall a FHIR package
     #[command(alias = "remove")]
     Uninstall(InstallCommand),
+    /// Check if a FHIR package is installed
+    Check(InstallCommand),
 }
 
 #[derive(Subcommand, Clone, Debug)]

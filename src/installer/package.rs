@@ -37,14 +37,13 @@ impl FhirPackage {
             let entries = fs::read_dir(self.dir.join("package"))?;
             for result in entries {
                 let entry = result?;
-                if let Ok(resource_info) = self.read_json::<ResourceTypeId>(&entry.path()) {
+                if let Ok(resource_info) = self.read_json::<ResourceInfo>(&entry.path()) {
                     let filename = entry.file_name().to_string_lossy().into_owned();
 
                     files.push(PackageIndexFile {
                         filename,
                         filepath: None,
-                        resource_type: resource_info.resource_type,
-                        id: resource_info.id,
+                        resource_info,
                     });
                 }
             }
@@ -71,10 +70,10 @@ pub struct PackageIndex {
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct PackageIndexFile {
-    filename: String,
+    pub filename: String,
     filepath: Option<String>,
-    pub resource_type: String,
-    pub id: String,
+    #[serde(flatten)]
+    pub resource_info: ResourceInfo,
 }
 
 impl PackageIndexFile {
@@ -87,9 +86,23 @@ impl PackageIndexFile {
     }
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
-struct ResourceTypeId {
+pub struct ResourceInfo {
     pub resource_type: String,
     pub id: String,
+    pub url: Option<String>,
+    pub version: Option<String>,
+}
+
+impl ResourceInfo {
+    pub fn canonical_url(&self) -> Option<String> {
+        match &self.url {
+            Some(url) => match &self.version {
+                Some(version) => Some(format!("{url}|{version}")),
+                None => Some(url.clone()),
+            },
+            None => None,
+        }
+    }
 }
