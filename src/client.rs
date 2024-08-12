@@ -7,6 +7,7 @@ mod operation_outcome;
 use anyhow::anyhow;
 use bundle::Bundle;
 use capability_statement::CapabilityStatement;
+use colored_json::ToColoredJson;
 use operation_outcome::OperationOutcome;
 use reqwest::{
     header::{HeaderValue, CONTENT_TYPE},
@@ -110,7 +111,9 @@ async fn handle_response_error(response: Response) -> anyhow::Result<Response> {
         match serde_json::from_str::<OperationOutcome>(&body) {
             Ok(outcome) => Err(anyhow!(
                 "FHIR error (status {status}): {}",
-                serde_json::to_string_pretty(&outcome).unwrap()
+                serde_json::to_string_pretty(&outcome)
+                    .unwrap()
+                    .to_colored_json_auto()?
             )),
             Err(_) => Err(anyhow!("Server error (status {status}): \"{body}\"")),
         }

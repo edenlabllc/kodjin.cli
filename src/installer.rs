@@ -210,10 +210,10 @@ async fn process_files(
             Ok(()) => (),
             Err(err) => {
                 let msg = format!(
-                    "{} could not process file \"{}\" in package {}: {err:#}",
+                    "{} could not process file {} in package {}: {err:#}",
                     style("Warning:").yellow(),
-                    file_path.display(),
-                    manifest.name
+                    style(file_path.display()).bold(),
+                    style(&manifest.name).bold(),
                 );
                 bar.suspend(|| {
                     println!("{msg}");
