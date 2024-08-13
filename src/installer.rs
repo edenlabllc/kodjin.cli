@@ -1,6 +1,7 @@
 mod downloader;
 mod package;
 mod processor;
+mod report;
 mod resource;
 
 const BASE_PACKAGE: &str = "hl7.fhir.r4.core";
@@ -15,6 +16,7 @@ use indexmap::IndexMap;
 use indicatif::{HumanDuration, MultiProgress, ProgressBar, ProgressStyle};
 use package::{FhirPackage, PackageIndexFile, PackageManifest};
 use processor::PackageInstallStatus;
+use report::InstallReport;
 use resource::{Resource, ResourceInfo};
 use serde_json::Value;
 use std::{
@@ -118,24 +120,36 @@ pub fn install_package<'a>(
             ))
             .unwrap(),
         );
-        // bar.set_style(
-        //     ProgressStyle::with_template(&format!(
-        //         "{{spinner}} {}: {{msg}} [{{wide_bar}}] [{{pos}}/{{len}}]",
-        //         style(&package_req).bold()
-        //     ))
-        //     .unwrap()
-        //     .progress_chars("#>-"),
-        // );
+
+        let mut report = InstallReport::default();
 
         let install_status =
             processor::check_package_installed(&package, ctx.fhir_client, &bar).await?;
 
-        if let PackageInstallStatus::NotInstalled(files) = install_status {
+        if let PackageInstallStatus::NotInstalled(missing_files) = install_status {
             let index = package.read_index()?;
 
             bar.set_length(index.files.len() as u64);
+            report.already_existed = index.files.len() - missing_files.len();
 
-            process_files(ctx, &package, manifest, files, &bar).await?;
+            process_files(ctx, &package, manifest, missing_files, &bar, &mut report).await?;
+
+            bar.suspend(|| {
+                println!(
+                    "Installed package {} ({} resources created, {} errors, and {} already existed)", 
+                    style(&package_req).bold(), 
+                    style(report.created).bold(), 
+                    style(report.errors).bold(), 
+                    style(report.already_existed).bold()
+                );
+            })
+        } else {
+            bar.suspend(|| {
+                println!(
+                    "Package {} is already installed",
+                    style(&package_req).bold()
+                );
+            })
         }
 
         Ok(())
@@ -165,6 +179,7 @@ async fn process_files(
     manifest: PackageManifest,
     files: Vec<PackageIndexFile>,
     bar: &ProgressBar,
+    report: &mut InstallReport,
     // progress: &MultiProgress,
 ) -> anyhow::Result<()> {
     for file in files {
@@ -207,17 +222,22 @@ async fn process_files(
         )
         .await
         {
-            Ok(()) => (),
+            Ok(()) => {
+                report.created += 1;
+            }
             Err(err) => {
+                let path: PathBuf = file_path.components().skip(1).collect();
+
                 let msg = format!(
                     "{} could not process file {} in package {}: {err:#}",
                     style("Warning:").yellow(),
-                    style(file_path.display()).bold(),
+                    style(path.display()).bold(),
                     style(&manifest.name).bold(),
                 );
                 bar.suspend(|| {
                     println!("{msg}");
-                })
+                });
+                report.errors += 1;
             }
         }
         bar.inc(1);

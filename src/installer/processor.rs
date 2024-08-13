@@ -68,16 +68,27 @@ async fn process_resources_type(
 
         match ctx.action {
             Action::Install => {
-                let source_path = resource.source_path.clone();
-                match process_resource(resource_type, resource, ctx.fhir_client, bar).await {
-                    Ok(()) => count += 1,
-                    Err(err) => {
+                let exists = check_resource_installed(ctx.fhir_client, &resource.info)
+                    .await
+                    .unwrap_or_else(|err| {
                         bar.suspend(|| {
-                            let msg = format!(
-                                "Warning: could not process file {source_path:?}: {err:#}",
-                            );
-                            println!("{}", style(msg).yellow())
-                        });
+                            println!("Could not check if resource exists: {err:#}");
+                            false
+                        })
+                    });
+
+                if !exists {
+                    let source_path = resource.source_path.clone();
+                    match process_resource(resource_type, resource, ctx.fhir_client, bar).await {
+                        Ok(()) => count += 1,
+                        Err(err) => {
+                            bar.suspend(|| {
+                                let msg = format!(
+                                    "Warning: could not process file {source_path:?}: {err:#}",
+                                );
+                                println!("{}", style(msg).yellow())
+                            });
+                        }
                     }
                 }
             }
@@ -113,16 +124,15 @@ pub async fn process_resource(
     client: &FhirClient,
     _bar: &ProgressBar,
 ) -> anyhow::Result<()> {
-    let exists = check_resource_installed(client, &resource.info).await?;
-    if !exists {
+    if resource.data.get("url").is_some() {
         let id = Uuid::new_v4();
         resource.set_id(id.to_string());
-
-        let payload = serde_json::to_string(&resource.data)?;
-        client
-            .upsert(resource_type, &resource.info.id, &payload)
-            .await?;
     }
+
+    let payload = serde_json::to_string(&resource.data)?;
+    client
+        .upsert(resource_type, &resource.info.id, &payload)
+        .await?;
 
     Ok(())
 }
