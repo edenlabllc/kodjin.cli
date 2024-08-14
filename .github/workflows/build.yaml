@@ -20,11 +20,14 @@ jobs:
       - name: Build binary for ${{ matrix.target }}
         run: cargo zigbuild --release --target ${{ matrix.target }}
 
+      - name: Archive binary
+        run: tar -cvf kodjin-cli-${{ matrix.target }}.tar -C target/release/${{ matrix.target }} kodjin-cli
+
       - name: Upload binary
         uses: actions/upload-artifact@v4
         with:
           name: kodjin-cli-${{ matrix.target }}
-          path: target/${{ matrix.target }}/release/kodjin-cli
+          path: kodjin-cli-${{ matrix.target }}.tar
 
   create-release:
     needs: build
