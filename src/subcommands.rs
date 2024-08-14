@@ -3,6 +3,7 @@ use crate::{
     client::FhirClient,
     config::{Config, ServerConfig},
     installer::{self, InstallContext},
+    print_values_table,
     registry::RegistryClient,
 };
 use anyhow::bail;
@@ -126,11 +127,7 @@ pub async fn metadata(client: FhirClient) -> anyhow::Result<()> {
         ("FHIR Version", Some(metadata.fhir_version)),
     ];
 
-    for (key, value) in values {
-        if let Some(value) = value {
-            println!("{}: {value}", style(key).blue());
-        }
-    }
+    print_values_table(&values);
 
     Ok(())
 }
@@ -228,4 +225,9 @@ pub async fn tree(cmd: InstallCommand) -> anyhow::Result<()> {
     }
 
     Ok(())
+}
+
+pub async fn info(cmd: InstallCommand) -> anyhow::Result<()> {
+    let registry_client = RegistryClient::new(cmd.registry);
+    installer::info(&registry_client, &cmd.name).await
 }

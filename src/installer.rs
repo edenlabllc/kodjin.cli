@@ -6,7 +6,7 @@ mod resource;
 
 const BASE_PACKAGE: &str = "hl7.fhir.r4.core";
 
-use crate::{client::FhirClient, registry::RegistryClient};
+use crate::{client::FhirClient, print_values_table, registry::RegistryClient};
 use anyhow::Context;
 use console::style;
 use deno_npm::registry::{NpmPackageInfo, NpmPackageVersionInfo};
@@ -137,9 +137,9 @@ pub fn install_package<'a>(
             bar.suspend(|| {
                 println!(
                     "Installed package {} ({} resources created, {} errors, and {} already existed)", 
-                    style(&package_req).bold(), 
-                    style(report.created).bold(), 
-                    style(report.errors).bold(), 
+                    style(&package_req).bold(),
+                    style(report.created).bold(),
+                    style(report.errors).bold(),
                     style(report.already_existed).bold()
                 );
             })
@@ -168,7 +168,7 @@ async fn resolve_version_info(
         .into_iter()
         .rev()
         .find(|version| package_req.version_req.matches(version))
-        .with_context(|| "Could not find matching package \"{package}\"")?;
+        .with_context(|| format!("Could not find matching package \"{package_req}\""))?;
     let version_info = package_info.versions.get(matching_version).unwrap().clone();
     Ok((package_info, version_info))
 }
@@ -355,7 +355,7 @@ pub async fn check_package_installed(
     let progress = MultiProgress::new();
     let bar = progress.add(bar);
     bar.set_style(
-        ProgressStyle::with_template("{spinner} [{pos}/{len}] {msg} [{wide_bar}]")
+        ProgressStyle::with_template("{spinner} {msg} [{wide_bar}] [{pos}/{len}]")
             .unwrap()
             .progress_chars("#>-"),
     );
@@ -414,7 +414,11 @@ pub async fn check_package_installed(
     Ok(())
 }
 
-pub fn print_tree<'a>( registry_client: &'a RegistryClient, package: &'a str, recursion_level: usize) -> BoxFuture<'a, anyhow::Result<()>> {
+pub fn print_tree<'a>(
+    registry_client: &'a RegistryClient,
+    package: &'a str,
+    recursion_level: usize,
+) -> BoxFuture<'a, anyhow::Result<()>> {
     Box::pin(async move {
         let package_req = PackageReq::from_str(package)?;
 
@@ -427,7 +431,8 @@ pub fn print_tree<'a>( registry_client: &'a RegistryClient, package: &'a str, re
             .with_message("Fetching package info")
             .with_style(bar_style.clone());
 
-        let (_package_info, version_info) = resolve_version_info(&package_req, registry_client).await?;
+        let (_package_info, version_info) =
+            resolve_version_info(&package_req, registry_client).await?;
 
         let fhir_package = downloader::download_package(
             registry_client,
@@ -436,19 +441,91 @@ pub fn print_tree<'a>( registry_client: &'a RegistryClient, package: &'a str, re
             bar.clone(),
         )
         .await?;
-        
+
         bar.finish_and_clear();
-        
+
         let index = fhir_package.read_index()?;
-        println!("{} - {} ({} resources)", " ".repeat(recursion_level * 2), style(format!("{}@{}", package_req.name, version_info.version)).bold(), index.files.len());
-        
+        println!(
+            "{} - {} ({} resources)",
+            " ".repeat(recursion_level * 2),
+            style(format!("{}@{}", package_req.name, version_info.version)).bold(),
+            index.files.len()
+        );
+
         let manifest = fhir_package.read_manifest()?;
         for (name, version) in manifest.dependencies {
-            
             let package = format!("{name}@{version}");
             print_tree(registry_client, &package, recursion_level + 1).await?;
         }
 
         Ok(())
     })
+}
+
+pub async fn info(registry_client: &RegistryClient, package: &str) -> anyhow::Result<()> {
+    let package_req = PackageReq::from_str(package)?;
+
+    let bar_style = ProgressStyle::with_template(&format!(
+        "{{spinner}} {}: {{msg}}",
+        style(&package_req).bold()
+    ))
+    .unwrap();
+    let bar = ProgressBar::new_spinner()
+        .with_message("Fetching package info")
+        .with_style(bar_style.clone());
+
+    let (_package_info, version_info) = resolve_version_info(&package_req, registry_client).await?;
+
+    let fhir_package = downloader::download_package(
+        registry_client,
+        package_req.name.clone(),
+        version_info.clone(),
+        bar.clone(),
+    )
+    .await?;
+
+    bar.finish_and_clear();
+
+    let manifest = fhir_package.read_manifest()?;
+    let index = fhir_package.read_index()?;
+
+    let mut dependencies = manifest
+        .dependencies
+        .iter()
+        .map(|(key, value)| format!("{key}@{value}"))
+        .collect::<Vec<_>>();
+    dependencies.sort();
+
+    let mut resources_count: IndexMap<String, usize> = IndexMap::new();
+    for file in index.files {
+        *resources_count
+            .entry(file.resource_info.resource_type)
+            .or_default() += 1;
+    }
+    let mut count_text = resources_count
+        .into_iter()
+        .map(|(resource_type, count)| format!("{resource_type}: {count}"))
+        .collect::<Vec<_>>();
+    count_text.sort();
+
+    let values = vec![
+        ("Name", Some(manifest.name)),
+        ("Version", Some(manifest.version)),
+        ("Author", manifest.author),
+        ("Description", manifest.description),
+        (
+            "FHIR Versions",
+            if manifest.fhir_versions.is_empty() {
+                None
+            } else {
+                Some(manifest.fhir_versions.join(", "))
+            },
+        ),
+        ("Dependencies", Some(dependencies.join(", "))),
+        ("Contents", Some(count_text.join(", "))),
+    ];
+
+    print_values_table(&values);
+
+    Ok(())
 }

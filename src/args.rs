@@ -30,6 +30,8 @@ pub enum CliCommand {
     Check(InstallCommand),
     /// Print dependency tree of a FHIR package
     Tree(InstallCommand),
+    /// Show information about a FHIR package
+    Info(InstallCommand),
 }
 
 #[derive(Subcommand, Clone, Debug)]

@@ -12,7 +12,7 @@ use clap::Parser;
 use client::FhirClient;
 use config::Config;
 use console::style;
-use std::process::ExitCode;
+use std::{ops::Deref, process::ExitCode};
 
 #[tokio::main(flavor = "current_thread")]
 async fn main() -> ExitCode {
@@ -51,6 +51,7 @@ async fn run(args: Args) -> anyhow::Result<()> {
             subcommands::check(cmd, client).await
         }
         CliCommand::Tree(cmd) => subcommands::tree(cmd).await,
+        CliCommand::Info(cmd) => subcommands::info(cmd).await,
     }
 }
 
@@ -71,4 +72,12 @@ fn get_client(config: &Config, args: &Args) -> anyhow::Result<FhirClient> {
         server_config.url.clone(),
         args.insecure_certificates,
     ))
+}
+
+fn print_values_table(values: &[(&str, Option<impl Deref<Target = str>>)]) {
+    for (key, value) in values {
+        if let Some(value) = value.as_deref() {
+            println!("{}: {value}", style(key).blue());
+        }
+    }
 }

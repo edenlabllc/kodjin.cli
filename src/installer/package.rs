@@ -54,9 +54,14 @@ impl FhirPackage {
 }
 
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct PackageManifest {
     pub name: String,
-    // pub version: String,
+    pub author: Option<String>,
+    pub description: Option<String>,
+    #[serde(default)]
+    pub fhir_versions: Vec<String>,
+    pub version: String,
     // pub url: Option<String>,
     #[serde(default)]
     pub dependencies: HashMap<String, String>,
