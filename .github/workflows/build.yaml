@@ -10,7 +10,7 @@ jobs:
       matrix:
         target: [ x86_64-unknown-linux-musl,  aarch64-unknown-linux-musl, universal2-apple-darwin ]
 
-    runs-on: ubuntu-2204
+    runs-on: ubuntu-22.04
     container:
       image: messense/cargo-zigbuild
     steps:
@@ -28,7 +28,7 @@ jobs:
 
   create-release:
     needs: build
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     if: (github.event_name == 'push' && github.ref == 'refs/heads/master')
 
     steps:
