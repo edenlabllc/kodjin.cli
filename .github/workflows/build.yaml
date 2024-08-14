@@ -21,7 +21,7 @@ jobs:
         run: cargo zigbuild --release --target ${{ matrix.target }}
 
       - name: Archive binary
-        run: tar -cvf kodjin-cli-${{ matrix.target }}.tar -C target/release/${{ matrix.target }} kodjin-cli
+        run: tar -cvf kodjin-cli-${{ matrix.target }}.tar -C target/${{ matrix.target }}/release kodjin-cli
 
       - name: Upload binary
         uses: actions/upload-artifact@v4
