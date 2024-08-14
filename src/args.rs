@@ -28,6 +28,8 @@ pub enum CliCommand {
     Uninstall(InstallCommand),
     /// Check if a FHIR package is installed
     Check(InstallCommand),
+    /// Print dependency tree of a FHIR package
+    Tree(InstallCommand),
 }
 
 #[derive(Subcommand, Clone, Debug)]

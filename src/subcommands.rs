@@ -215,3 +215,17 @@ pub async fn check(cmd: InstallCommand, client: FhirClient) -> anyhow::Result<()
 
     Ok(())
 }
+
+pub async fn tree(cmd: InstallCommand) -> anyhow::Result<()> {
+    match cmd.r#type {
+        InstallType::Package => {
+            let registry_client = RegistryClient::new(cmd.registry);
+            installer::print_tree(&registry_client, &cmd.name, 0).await?;
+        }
+        InstallType::Directory => {
+            todo!()
+        }
+    }
+
+    Ok(())
+}

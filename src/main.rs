@@ -50,6 +50,7 @@ async fn run(args: Args) -> anyhow::Result<()> {
             let client = get_client(&config, &args)?;
             subcommands::check(cmd, client).await
         }
+        CliCommand::Tree(cmd) => subcommands::tree(cmd).await,
     }
 }
 

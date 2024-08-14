@@ -413,3 +413,42 @@ pub async fn check_package_installed(
 
     Ok(())
 }
+
+pub fn print_tree<'a>( registry_client: &'a RegistryClient, package: &'a str, recursion_level: usize) -> BoxFuture<'a, anyhow::Result<()>> {
+    Box::pin(async move {
+        let package_req = PackageReq::from_str(package)?;
+
+        let bar_style = ProgressStyle::with_template(&format!(
+            "{{spinner}} {}: {{msg}}",
+            style(&package_req).bold()
+        ))
+        .unwrap();
+        let bar = ProgressBar::new_spinner()
+            .with_message("Fetching package info")
+            .with_style(bar_style.clone());
+
+        let (_package_info, version_info) = resolve_version_info(&package_req, registry_client).await?;
+
+        let fhir_package = downloader::download_package(
+            registry_client,
+            package_req.name.clone(),
+            version_info.clone(),
+            bar.clone(),
+        )
+        .await?;
+        
+        bar.finish_and_clear();
+        
+        let index = fhir_package.read_index()?;
+        println!("{} - {} ({} resources)", " ".repeat(recursion_level * 2), style(format!("{}@{}", package_req.name, version_info.version)).bold(), index.files.len());
+        
+        let manifest = fhir_package.read_manifest()?;
+        for (name, version) in manifest.dependencies {
+            
+            let package = format!("{name}@{version}");
+            print_tree(registry_client, &package, recursion_level + 1).await?;
+        }
+
+        Ok(())
+    })
+}
