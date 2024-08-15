@@ -77,6 +77,7 @@ impl FhirClient {
         let response = self
             .request(Method::GET, &format!("/{resource_type}"))
             .query(params)
+            .header("Prefer", "handling=strict")
             .send()
             .await?;
         let bundle = handle_response_error(response).await?.json().await?;
@@ -110,7 +111,7 @@ async fn handle_response_error(response: Response) -> anyhow::Result<Response> {
         let body = response.text().await?;
         match serde_json::from_str::<OperationOutcome>(&body) {
             Ok(outcome) => Err(anyhow!(
-                "FHIR error (status {status}): {}",
+                "FHIR error (status {status}):\n{}",
                 serde_json::to_string_pretty(&outcome)
                     .unwrap()
                     .to_colored_json_auto()?

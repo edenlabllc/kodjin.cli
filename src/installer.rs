@@ -125,8 +125,17 @@ pub fn install_package<'a>(
 
         let install_status =
             processor::check_package_installed(&package, ctx.fhir_client, &bar).await?;
+        bar.reset();
 
         if let PackageInstallStatus::NotInstalled(missing_files) = install_status {
+            bar.suspend(|| {
+                println!(
+                    "{}: installing {} resources",
+                    style(&package_req).bold(),
+                    missing_files.len()
+                )
+            });
+
             let index = package.read_index()?;
 
             bar.set_length(index.files.len() as u64);

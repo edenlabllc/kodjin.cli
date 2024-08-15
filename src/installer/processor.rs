@@ -157,6 +157,7 @@ pub async fn check_package_installed(
 ) -> anyhow::Result<PackageInstallStatus> {
     let index = package.read_index()?;
 
+    total_progress.reset();
     total_progress.set_length(index.files.len() as u64);
     total_progress.set_message("Checking resources");
     // total_progress.set_style(
