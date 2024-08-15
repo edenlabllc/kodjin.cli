@@ -22,16 +22,18 @@ pub enum CliCommand {
     /// Show FHIR server metadata
     Metadata,
     /// Install a FHIR package
-    Install(InstallCommand),
+    Install(PackageCommand),
     /// Uninstall a FHIR package
     #[command(alias = "remove")]
-    Uninstall(InstallCommand),
+    Uninstall(PackageCommand),
     /// Check if a FHIR package is installed
-    Check(InstallCommand),
+    Check(PackageCommand),
     /// Print dependency tree of a FHIR package
-    Tree(InstallCommand),
+    Tree(PackageCommand),
     /// Show information about a FHIR package
-    Info(InstallCommand),
+    Info(PackageCommand),
+    /// Download a package locally
+    Download(PackageCommand),
 }
 
 #[derive(Subcommand, Clone, Debug)]
@@ -51,10 +53,10 @@ pub enum ServerCommand {
 }
 
 #[derive(Parser, Clone, Debug)]
-pub struct InstallCommand {
-    /// Item to install
+pub struct PackageCommand {
+    /// Item to process
     pub name: String,
-    /// Type of the installation target
+    /// Type of the item
     #[clap(value_enum, short, long, default_value_t)]
     pub r#type: InstallType,
     /// Registry URL for FHIR packages

@@ -11,6 +11,7 @@ use anyhow::Context;
 use console::style;
 use deno_npm::registry::{NpmPackageInfo, NpmPackageVersionInfo};
 use deno_semver::package::PackageReq;
+use fs_extra::dir::CopyOptions;
 use futures::future::{try_join_all, BoxFuture};
 use indexmap::IndexMap;
 use indicatif::{HumanDuration, MultiProgress, ProgressBar, ProgressStyle};
@@ -535,6 +536,45 @@ pub async fn info(registry_client: &RegistryClient, package: &str) -> anyhow::Re
     ];
 
     print_values_table(&values);
+
+    Ok(())
+}
+
+pub async fn download(registry_client: &RegistryClient, package: &str) -> anyhow::Result<()> {
+    let package_req = PackageReq::from_str(package)?;
+
+    let bar_style = ProgressStyle::with_template(&format!(
+        "{{spinner}} {}: {{msg}}",
+        style(&package_req).bold()
+    ))
+    .unwrap();
+    let bar = ProgressBar::new_spinner()
+        .with_message("Fetching package info")
+        .with_style(bar_style.clone());
+
+    let (_package_info, version_info) = resolve_version_info(&package_req, registry_client).await?;
+
+    let fhir_package = downloader::download_package(
+        registry_client,
+        package_req.name.clone(),
+        version_info.clone(),
+        bar.clone(),
+    )
+    .await?;
+
+    bar.set_message("Copying files");
+
+    let output_folder = format!("{}@{}", package_req.name, version_info.version);
+    fs::create_dir_all(&output_folder)?;
+    fs_extra::dir::copy(
+        fhir_package.dir.join("package"),
+        &output_folder,
+        &CopyOptions::default().content_only(true),
+    )
+    .context("Could not copy files")?;
+
+    bar.finish_and_clear();
+    println!("Package downloaded to {}", style(output_folder).bold());
 
     Ok(())
 }

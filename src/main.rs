@@ -52,6 +52,7 @@ async fn run(args: Args) -> anyhow::Result<()> {
         }
         CliCommand::Tree(cmd) => subcommands::tree(cmd).await,
         CliCommand::Info(cmd) => subcommands::info(cmd).await,
+        CliCommand::Download(cmd) => subcommands::download(cmd).await,
     }
 }
 

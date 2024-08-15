@@ -1,5 +1,5 @@
 use crate::{
-    args::{InstallCommand, InstallType, ServerCommand},
+    args::{InstallType, PackageCommand, ServerCommand},
     client::FhirClient,
     config::{Config, ServerConfig},
     installer::{self, InstallContext},
@@ -132,7 +132,7 @@ pub async fn metadata(client: FhirClient) -> anyhow::Result<()> {
     Ok(())
 }
 
-pub async fn install(cmd: InstallCommand, client: FhirClient) -> anyhow::Result<()> {
+pub async fn install(cmd: PackageCommand, client: FhirClient) -> anyhow::Result<()> {
     let ctx = InstallContext {
         fhir_client: &client,
         action: installer::Action::Install,
@@ -163,7 +163,7 @@ pub async fn install(cmd: InstallCommand, client: FhirClient) -> anyhow::Result<
     Ok(())
 }
 
-pub async fn uninstall(cmd: InstallCommand, client: FhirClient) -> anyhow::Result<()> {
+pub async fn uninstall(cmd: PackageCommand, client: FhirClient) -> anyhow::Result<()> {
     let ctx = InstallContext {
         fhir_client: &client,
         action: installer::Action::Uninstall,
@@ -194,7 +194,7 @@ pub async fn uninstall(cmd: InstallCommand, client: FhirClient) -> anyhow::Resul
     Ok(())
 }
 
-pub async fn check(cmd: InstallCommand, client: FhirClient) -> anyhow::Result<()> {
+pub async fn check(cmd: PackageCommand, client: FhirClient) -> anyhow::Result<()> {
     let ctx = InstallContext {
         fhir_client: &client,
         action: installer::Action::Uninstall,
@@ -213,7 +213,7 @@ pub async fn check(cmd: InstallCommand, client: FhirClient) -> anyhow::Result<()
     Ok(())
 }
 
-pub async fn tree(cmd: InstallCommand) -> anyhow::Result<()> {
+pub async fn tree(cmd: PackageCommand) -> anyhow::Result<()> {
     match cmd.r#type {
         InstallType::Package => {
             let registry_client = RegistryClient::new(cmd.registry);
@@ -227,7 +227,12 @@ pub async fn tree(cmd: InstallCommand) -> anyhow::Result<()> {
     Ok(())
 }
 
-pub async fn info(cmd: InstallCommand) -> anyhow::Result<()> {
+pub async fn info(cmd: PackageCommand) -> anyhow::Result<()> {
     let registry_client = RegistryClient::new(cmd.registry);
     installer::info(&registry_client, &cmd.name).await
+}
+
+pub async fn download(cmd: PackageCommand) -> anyhow::Result<()> {
+    let registry_client = RegistryClient::new(cmd.registry);
+    installer::download(&registry_client, &cmd.name).await
 }
