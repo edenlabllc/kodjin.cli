@@ -11,7 +11,7 @@ use colored_json::ToColoredJson;
 use operation_outcome::OperationOutcome;
 use reqwest::{
     header::{HeaderValue, CONTENT_TYPE},
-    Method, RequestBuilder, Response, StatusCode,
+    Method, RequestBuilder, Response,
 };
 use serde::de::DeserializeOwned;
 use serde_json::Value;
@@ -38,7 +38,7 @@ impl FhirClient {
     /// Standard FHIR JSON request
     fn request(&self, method: Method, path: &str) -> RequestBuilder {
         let url = format!("{}{path}", self.base_url);
-        self.client.request(method, &url)
+        self.client.request(method, url)
     }
 
     pub async fn upsert(
@@ -56,7 +56,7 @@ impl FhirClient {
         Ok(handle_response_error(response).await?.json().await?)
     }
 
-    pub async fn get(&self, resource_type: &str, id: &str) -> anyhow::Result<Option<Value>> {
+    /*pub async fn get(&self, resource_type: &str, id: &str) -> anyhow::Result<Option<Value>> {
         let response = self
             .request(Method::GET, &format!("/{resource_type}/{id}"))
             .send()
@@ -67,7 +67,7 @@ impl FhirClient {
         } else {
             Ok(Some(handle_response_error(response).await?.json().await?))
         }
-    }
+    }*/
 
     pub async fn search<T: DeserializeOwned>(
         &self,

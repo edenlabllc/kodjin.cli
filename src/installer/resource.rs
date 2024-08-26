@@ -11,7 +11,7 @@ pub struct Resource {
 
 impl Resource {
     pub fn set_id(&mut self, new_id: String) {
-        self.info.id = new_id.clone();
+        self.info.id.clone_from(&new_id);
         if let Some(obj) = self.data.as_object_mut() {
             obj.insert("id".to_owned(), new_id.into());
         }
