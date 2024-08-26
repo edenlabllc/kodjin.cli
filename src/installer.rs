@@ -396,12 +396,6 @@ pub async fn check_package_installed(
                 style("partially installed").yellow()
             };
 
-            println!(
-                "Package {} is {installed_text} ({}/{} resources missing)",
-                style(&package_req).bold(),
-                missing.len(),
-                index.files.len(),
-            );
             println!("The following files are missing:");
 
             // Group by resource type for better output first
@@ -418,12 +412,19 @@ pub async fn check_package_installed(
 
                 for file in files {
                     if let Some(canonical_url) = file.resource_info.canonical_url() {
-                        println!("- {} ({})", file.filename, style(canonical_url).bold());
+                        println!("  - {} ({})", file.filename, style(canonical_url).bold());
                     } else {
-                        println!("- {}", file.filename,);
+                        println!("  - {}", file.filename,);
                     }
                 }
             }
+
+            println!(
+                "Package {} is {installed_text} ({}/{} resources present)",
+                style(&package_req).bold(),
+                index.files.len() - missing.len(),
+                index.files.len(),
+            );
         }
     }
 
