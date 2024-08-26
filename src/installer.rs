@@ -447,8 +447,18 @@ pub fn print_tree<'a>(
             .with_message("Fetching package info")
             .with_style(bar_style.clone());
 
-        let (_package_info, version_info) =
-            resolve_version_info(&package_req, registry_client).await?;
+        let version_info = match resolve_version_info(&package_req, registry_client).await {
+            Ok((_package_info, version_info)) => version_info,
+            Err(err) => {
+                println!(
+                    "{} - {} ({})",
+                    " ".repeat(recursion_level * 2),
+                    style(package_req).bold(),
+                    style(format!("Could not resolve: {err:#}")).red()
+                );
+                return Ok(());
+            }
+        };
 
         let fhir_package = downloader::download_package(
             registry_client,
@@ -471,7 +481,9 @@ pub fn print_tree<'a>(
         let manifest = fhir_package.read_manifest()?;
         for (name, version) in manifest.dependencies {
             let package = format!("{name}@{version}");
-            print_tree(registry_client, &package, recursion_level + 1).await?;
+            print_tree(registry_client, &package, recursion_level + 1)
+                .await
+                .with_context(|| format!("Could not process dependency {package}"))?;
         }
 
         Ok(())
