@@ -21,13 +21,13 @@ use report::InstallReport;
 use resource::{Resource, ResourceInfo};
 use serde_json::Value;
 use std::{
-    collections::HashSet,
+    collections::HashMap,
     fs,
     path::{Path, PathBuf},
     sync::Mutex,
     time::Instant,
 };
-use tokio::sync::Semaphore;
+use tokio::sync::{watch, Semaphore};
 
 #[derive(Clone, Copy)]
 pub struct InstallContext<'a> {
@@ -55,18 +55,24 @@ pub fn install_package<'a>(
     registry_client: &'a RegistryClient,
     package: String,
     progress: &'a MultiProgress,
-    current_packages: &'a Mutex<HashSet<String>>,
+    current_packages: &'a Mutex<HashMap<String, watch::Receiver<()>>>,
     semaphore: &'a Semaphore,
 ) -> BoxFuture<'a, anyhow::Result<()>> {
-    // Avoid processing the same package twice
-    // TODO: this should wait via a channel
-    if !current_packages.lock().unwrap().insert(package.clone()) {
-        return Box::pin(async { Ok(()) });
-    }
-
-    let _permit = semaphore.acquire();
-
     Box::pin(async move {
+        let maybe_result_rx = current_packages.lock().unwrap().get(&package).cloned();
+        if let Some(mut rx) = maybe_result_rx {
+            let _ = rx.changed().await;
+            return Ok(());
+        }
+
+        let (_result_tx, result_rx) = watch::channel(());
+        current_packages
+            .lock()
+            .unwrap()
+            .insert(package.clone(), result_rx);
+
+        let _permit = semaphore.acquire();
+
         let package_req = PackageReq::from_str(&package).context("Invalid package request")?;
 
         // Assume the base package is always installed

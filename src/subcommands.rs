@@ -9,7 +9,7 @@ use crate::{
 use anyhow::bail;
 use console::style;
 use indicatif::{MultiProgress, ProgressBar};
-use std::{collections::HashSet, path::PathBuf, sync::Mutex, time::Duration};
+use std::{collections::HashMap, path::PathBuf, sync::Mutex, time::Duration};
 use tokio::sync::Semaphore;
 
 pub async fn server(
@@ -143,7 +143,7 @@ pub async fn install(cmd: PackageCommand, client: FhirClient) -> anyhow::Result<
             let multi_progress = MultiProgress::new();
             let semaphore = Semaphore::new(5);
 
-            let packages = Mutex::new(HashSet::new());
+            let packages = Mutex::new(HashMap::new());
             let registry_client = RegistryClient::new(cmd.registry);
             installer::install_package(
                 ctx,
@@ -174,7 +174,7 @@ pub async fn uninstall(cmd: PackageCommand, client: FhirClient) -> anyhow::Resul
             let multi_progress = MultiProgress::new();
             let semaphore = Semaphore::new(5);
 
-            let packages = Mutex::new(HashSet::new());
+            let packages = Mutex::new(HashMap::new());
             let registry_client = RegistryClient::new(cmd.registry);
             installer::install_package(
                 ctx,
