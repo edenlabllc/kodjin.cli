@@ -4,6 +4,7 @@ use super::{
     Action, InstallContext,
 };
 use crate::client::FhirClient;
+use anyhow::Context;
 use console::style;
 use futures::{stream, StreamExt, TryStreamExt};
 use indexmap::IndexMap;
@@ -122,18 +123,38 @@ pub async fn process_resource(
     resource_type: &str,
     mut resource: Resource,
     client: &FhirClient,
-    _bar: &ProgressBar,
+    bar: &ProgressBar,
 ) -> anyhow::Result<()> {
     if resource.data.get("url").is_some() {
         let id = Uuid::new_v4();
         resource.set_id(id.to_string());
     }
 
-    // TODO: generate snapshot here
+    if resource_type == "StructureDefinition" && resource.data.get("snapshot").is_none() {
+        bar.suspend(|| {
+            println!(
+                "{} {resource_type} {} is missing a snapshot, generating",
+                style("Note:").bold(),
+                style(resource.source_path.display()).bold()
+            );
+        });
 
-    let payload = serde_json::to_string(&resource.data)?;
+        let mut snapshot_response = client
+            .snapshot(&resource.data)
+            .await
+            .context("Could not generate snapshot")?;
+        let snapshot = snapshot_response
+            .as_object_mut()
+            .and_then(|obj| obj.remove("snapshot"))
+            .context("Snapshot operation response does not have snapshot field")?;
+
+        if let Some(obj) = resource.data.as_object_mut() {
+            obj.insert("snapshot".to_owned(), snapshot);
+        }
+    }
+
     client
-        .upsert(resource_type, &resource.info.id, &payload)
+        .upsert(resource_type, &resource.info.id, &resource.data)
         .await?;
 
     Ok(())

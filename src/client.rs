@@ -9,11 +9,8 @@ use bundle::Bundle;
 use capability_statement::CapabilityStatement;
 use colored_json::ToColoredJson;
 use operation_outcome::OperationOutcome;
-use reqwest::{
-    header::{HeaderValue, CONTENT_TYPE},
-    Method, RequestBuilder, Response,
-};
-use serde::de::DeserializeOwned;
+use reqwest::{Method, RequestBuilder, Response};
+use serde::{de::DeserializeOwned, Serialize};
 use serde_json::Value;
 use std::sync::Arc;
 
@@ -45,12 +42,11 @@ impl FhirClient {
         &self,
         resource_type: &str,
         id: &str,
-        payload: &str,
+        payload: &impl Serialize,
     ) -> anyhow::Result<Value> {
         let response = self
             .request(Method::PUT, &format!("/{resource_type}/{id}"))
-            .header(CONTENT_TYPE, HeaderValue::from_static("application/json"))
-            .body(payload.to_owned())
+            .json(payload)
             .send()
             .await?;
         Ok(handle_response_error(response).await?.json().await?)
@@ -68,6 +64,15 @@ impl FhirClient {
             Ok(Some(handle_response_error(response).await?.json().await?))
         }
     }*/
+
+    pub async fn snapshot(&self, payload: &impl Serialize) -> anyhow::Result<Value> {
+        let response = self
+            .request(Method::POST, "/StructureDefinition/$snapshot")
+            .json(payload)
+            .send()
+            .await?;
+        Ok(handle_response_error(response).await?.json().await?)
+    }
 
     pub async fn search<T: DeserializeOwned>(
         &self,
