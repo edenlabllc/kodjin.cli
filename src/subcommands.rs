@@ -146,6 +146,7 @@ pub async fn install(cmd: PackageCommand, client: FhirClient) -> anyhow::Result<
         current_packages: &packages,
         semaphore: &semaphore,
         registry_client: &registry_client,
+        skip_strict_reference_versions: cmd.skip_strict_reference_versions,
     };
 
     match cmd.r#type {
@@ -174,6 +175,7 @@ pub async fn uninstall(cmd: PackageCommand, client: FhirClient) -> anyhow::Resul
         current_packages: &packages,
         semaphore: &semaphore,
         registry_client: &registry_client,
+        skip_strict_reference_versions: cmd.skip_strict_reference_versions,
     };
 
     match cmd.r#type {
@@ -202,6 +204,7 @@ pub async fn check(cmd: PackageCommand, client: FhirClient) -> anyhow::Result<()
         current_packages: &packages,
         semaphore: &semaphore,
         registry_client: &registry_client,
+        skip_strict_reference_versions: cmd.skip_strict_reference_versions,
     };
 
     match cmd.r#type {

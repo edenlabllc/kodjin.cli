@@ -62,6 +62,10 @@ pub struct PackageCommand {
     /// Registry URL for FHIR packages
     #[clap(short, long, default_value = "https://packages.simplifier.net")]
     pub registry: String,
+    /// Do not change profile references to be version-specific,
+    /// keep them as-is instead
+    #[clap(long, default_value_t = false)]
+    pub skip_strict_reference_versions: bool,
 }
 
 #[derive(Clone, Copy, Debug, Default, ValueEnum)]

@@ -1,5 +1,5 @@
 use super::{
-    package::{FhirPackage, PackageIndexFile},
+    package::{FhirPackage, PackageIndex, PackageIndexFile},
     resource::{Resource, ResourceInfo},
     Action, InstallContext,
 };
@@ -9,6 +9,7 @@ use console::style;
 use futures::{stream, StreamExt, TryStreamExt};
 use indexmap::IndexMap;
 use indicatif::{ProgressBar, ProgressStyle};
+use serde_json::Value;
 use std::time::Duration;
 use uuid::Uuid;
 
@@ -79,8 +80,8 @@ async fn process_resources_type(
                     });
 
                 if !exists {
-                    let source_path = resource.source_path.clone();
-                    match process_resource(resource_type, resource, ctx.fhir_client, bar).await {
+                    // let source_path = resource.source_path.clone();
+                    /*match process_resource(resource_type, resource,  ctx.fhir_client, bar).await {
                         Ok(()) => count += 1,
                         Err(err) => {
                             bar.suspend(|| {
@@ -90,7 +91,8 @@ async fn process_resources_type(
                                 println!("{}", style(msg).yellow())
                             });
                         }
-                    }
+                    }*/
+                    todo!()
                 }
             }
             Action::Uninstall => match ctx
@@ -120,9 +122,10 @@ async fn process_resources_type(
 }
 
 pub async fn process_resource(
+    ctx: InstallContext<'_>,
     resource_type: &str,
     mut resource: Resource,
-    client: &FhirClient,
+    current_index: &PackageIndex,
     bar: &ProgressBar,
 ) -> anyhow::Result<()> {
     if resource.data.get("url").is_some() {
@@ -130,34 +133,105 @@ pub async fn process_resource(
         resource.set_id(id.to_string());
     }
 
-    if resource_type == "StructureDefinition" && resource.data.get("snapshot").is_none() {
-        bar.suspend(|| {
-            println!(
-                "{} {resource_type} {} is missing a snapshot, generating",
-                style("Note:").bold(),
-                style(resource.source_path.display()).bold()
-            );
-        });
+    if resource_type == "StructureDefinition" {
+        if resource.data.get("snapshot").is_none() {
+            bar.suspend(|| {
+                println!(
+                    "{} {resource_type} {} is missing a snapshot, generating",
+                    style("Note:").bold(),
+                    style(resource.source_path.display()).bold()
+                );
+            });
 
-        let mut snapshot_response = client
-            .snapshot(&resource.data)
-            .await
-            .context("Could not generate snapshot")?;
-        let snapshot = snapshot_response
-            .as_object_mut()
-            .and_then(|obj| obj.remove("snapshot"))
-            .context("Snapshot operation response does not have snapshot field")?;
+            let mut snapshot_response = ctx
+                .fhir_client
+                .snapshot(&resource.data)
+                .await
+                .context("Could not generate snapshot")?;
+            let snapshot = snapshot_response
+                .as_object_mut()
+                .and_then(|obj| obj.remove("snapshot"))
+                .context("Snapshot operation response does not have snapshot field")?;
 
-        if let Some(obj) = resource.data.as_object_mut() {
-            obj.insert("snapshot".to_owned(), snapshot);
+            if let Some(obj) = resource.data.as_object_mut() {
+                obj.insert("snapshot".to_owned(), snapshot);
+            }
+        }
+
+        if !ctx.skip_strict_reference_versions {
+            let count = process_definition_references(&mut resource.data, current_index);
+            if count > 0 {
+                bar.suspend(|| {
+                    println!("{}: {count} profile reference fields were normalized to contain an explicit version in profile {}", style("Note:").bold(), style(resource.source_path.display()).bold());
+                })
+            }
         }
     }
 
-    client
+    ctx.fhir_client
         .upsert(resource_type, &resource.info.id, &resource.data)
         .await?;
 
     Ok(())
+}
+
+/// Normalizes references within the current package to point to specific versions of profiles
+fn process_definition_references(definition_data: &mut Value, current_index: &PackageIndex) -> u64 {
+    let mut changed_count = 0;
+
+    if let Some(snapshot) = definition_data.get_mut("snapshot") {
+        changed_count += process_definition_snapshot_references(snapshot, current_index);
+    }
+    if let Some(differential) = definition_data.get_mut("differential") {
+        changed_count += process_definition_snapshot_references(differential, current_index);
+    }
+
+    changed_count
+}
+
+/// Works for differential too
+fn process_definition_snapshot_references(
+    snapshot: &mut Value,
+    current_index: &PackageIndex,
+) -> u64 {
+    let mut changed_count = 0;
+
+    if let Some(Value::Array(elements)) = snapshot.get_mut("element") {
+        for element_definition in elements {
+            if let Some(Value::Object(element_type)) = element_definition.get_mut("type") {
+                for field in ["profile", "targetProfile"] {
+                    if let Some(Value::String(reference)) = element_type.get_mut(field) {
+                        if normalize_profile_reference(reference, current_index) {
+                            changed_count += 1;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    changed_count
+}
+
+fn normalize_profile_reference(reference: &mut String, current_index: &PackageIndex) -> bool {
+    if reference.split_once('|').is_some() {
+        // Reference is already versioned
+        return false;
+    }
+
+    // Try to find the latest version of a profile with such URL in the current index
+    // If it exists, use that version in the reference explicitly
+    if let Some(max_version) = current_index
+        .files
+        .iter()
+        .filter(|file| file.resource_info.url.as_ref() == Some(&*reference))
+        .flat_map(|file| &file.resource_info.url)
+        .max()
+    {
+        *reference = format!("{reference}|{max_version}");
+    }
+
+    true
 }
 
 /// Strip the resource of server-defined values such a `lastUpdated` and `versionId`

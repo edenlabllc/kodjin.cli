@@ -15,7 +15,7 @@ use fs_extra::dir::CopyOptions;
 use futures::future::{try_join_all, BoxFuture};
 use indexmap::IndexMap;
 use indicatif::{HumanDuration, MultiProgress, ProgressBar, ProgressStyle};
-use package::{FhirPackage, PackageIndexFile, PackageManifest};
+use package::{FhirPackage, PackageIndex, PackageIndexFile, PackageManifest};
 use processor::PackageInstallStatus;
 use report::InstallReport;
 use resource::{Resource, ResourceInfo};
@@ -37,6 +37,7 @@ pub struct InstallContext<'a> {
     pub current_packages: &'a Mutex<HashMap<String, watch::Receiver<()>>>,
     pub semaphore: &'a Semaphore,
     pub registry_client: &'a RegistryClient,
+    pub skip_strict_reference_versions: bool,
 }
 
 #[derive(Clone, Copy)]
@@ -158,7 +159,16 @@ fn install_package<'a>(
             bar.set_length(index.files.len() as u64);
             report.already_existed = index.files.len() - missing_files.len();
 
-            process_files(ctx, &package, manifest, missing_files, bar, &mut report).await?;
+            process_files(
+                ctx,
+                &package,
+                manifest,
+                missing_files,
+                &index,
+                bar,
+                &mut report,
+            )
+            .await?;
 
             bar.suspend(|| {
                 println!(
@@ -204,6 +214,7 @@ async fn process_files(
     package: &FhirPackage,
     manifest: PackageManifest,
     files: Vec<PackageIndexFile>,
+    current_index: &PackageIndex,
     bar: &ProgressBar,
     report: &mut InstallReport,
     // progress: &MultiProgress,
@@ -241,9 +252,10 @@ async fn process_files(
         };
 
         match processor::process_resource(
+            ctx,
             &file.resource_info.resource_type,
             resource,
-            ctx.fhir_client,
+            current_index,
             bar,
         )
         .await
