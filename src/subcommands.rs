@@ -133,27 +133,24 @@ pub async fn metadata(client: FhirClient) -> anyhow::Result<()> {
 }
 
 pub async fn install(cmd: PackageCommand, client: FhirClient) -> anyhow::Result<()> {
+    let multi_progress = MultiProgress::new();
+    let semaphore = Semaphore::new(5);
+
+    let packages = Mutex::new(HashMap::new());
+    let registry_client = RegistryClient::new(cmd.registry);
+
     let ctx = InstallContext {
         fhir_client: &client,
         action: installer::Action::Install,
+        progress: &multi_progress,
+        current_packages: &packages,
+        semaphore: &semaphore,
+        registry_client: &registry_client,
     };
 
     match cmd.r#type {
         InstallType::Package => {
-            let multi_progress = MultiProgress::new();
-            let semaphore = Semaphore::new(5);
-
-            let packages = Mutex::new(HashMap::new());
-            let registry_client = RegistryClient::new(cmd.registry);
-            installer::install_package(
-                ctx,
-                &registry_client,
-                cmd.name,
-                &multi_progress,
-                &packages,
-                &semaphore,
-            )
-            .await?;
+            installer::install_package_by_name(ctx, cmd.name).await?;
         }
         InstallType::Directory => {
             installer::process_directory(ctx, &PathBuf::from(cmd.name)).await?;
@@ -164,27 +161,24 @@ pub async fn install(cmd: PackageCommand, client: FhirClient) -> anyhow::Result<
 }
 
 pub async fn uninstall(cmd: PackageCommand, client: FhirClient) -> anyhow::Result<()> {
+    let multi_progress = MultiProgress::new();
+    let semaphore = Semaphore::new(5);
+
+    let packages = Mutex::new(HashMap::new());
+    let registry_client = RegistryClient::new(cmd.registry);
+
     let ctx = InstallContext {
         fhir_client: &client,
         action: installer::Action::Uninstall,
+        progress: &multi_progress,
+        current_packages: &packages,
+        semaphore: &semaphore,
+        registry_client: &registry_client,
     };
 
     match cmd.r#type {
         InstallType::Package => {
-            let multi_progress = MultiProgress::new();
-            let semaphore = Semaphore::new(5);
-
-            let packages = Mutex::new(HashMap::new());
-            let registry_client = RegistryClient::new(cmd.registry);
-            installer::install_package(
-                ctx,
-                &registry_client,
-                cmd.name,
-                &multi_progress,
-                &packages,
-                &semaphore,
-            )
-            .await?;
+            installer::install_package_by_name(ctx, cmd.name).await?;
         }
         InstallType::Directory => {
             installer::process_directory(ctx, &PathBuf::from(cmd.name)).await?;
@@ -195,14 +189,23 @@ pub async fn uninstall(cmd: PackageCommand, client: FhirClient) -> anyhow::Resul
 }
 
 pub async fn check(cmd: PackageCommand, client: FhirClient) -> anyhow::Result<()> {
+    let multi_progress = MultiProgress::new();
+    let semaphore = Semaphore::new(5);
+
+    let packages = Mutex::new(HashMap::new());
+    let registry_client = RegistryClient::new(cmd.registry);
+
     let ctx = InstallContext {
         fhir_client: &client,
-        action: installer::Action::Uninstall,
+        action: installer::Action::Install,
+        progress: &multi_progress,
+        current_packages: &packages,
+        semaphore: &semaphore,
+        registry_client: &registry_client,
     };
 
     match cmd.r#type {
         InstallType::Package => {
-            let registry_client = RegistryClient::new(cmd.registry);
             installer::check_package_installed(ctx, &registry_client, &cmd.name).await?;
         }
         InstallType::Directory => {

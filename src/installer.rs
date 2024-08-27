@@ -33,6 +33,10 @@ use tokio::sync::{watch, Semaphore};
 pub struct InstallContext<'a> {
     pub fhir_client: &'a FhirClient,
     pub action: Action,
+    pub progress: &'a MultiProgress,
+    pub current_packages: &'a Mutex<HashMap<String, watch::Receiver<()>>>,
+    pub semaphore: &'a Semaphore,
+    pub registry_client: &'a RegistryClient,
 }
 
 #[derive(Clone, Copy)]
@@ -50,28 +54,25 @@ impl Action {
     }
 }
 
-pub fn install_package<'a>(
-    ctx: InstallContext<'a>,
-    registry_client: &'a RegistryClient,
+pub fn install_package_by_name(
+    ctx: InstallContext<'_>,
     package: String,
-    progress: &'a MultiProgress,
-    current_packages: &'a Mutex<HashMap<String, watch::Receiver<()>>>,
-    semaphore: &'a Semaphore,
-) -> BoxFuture<'a, anyhow::Result<()>> {
+) -> BoxFuture<'_, anyhow::Result<()>> {
     Box::pin(async move {
-        let maybe_result_rx = current_packages.lock().unwrap().get(&package).cloned();
+        let maybe_result_rx = ctx.current_packages.lock().unwrap().get(&package).cloned();
         if let Some(mut rx) = maybe_result_rx {
             let _ = rx.changed().await;
             return Ok(());
         }
 
         let (_result_tx, result_rx) = watch::channel(());
-        current_packages
+
+        ctx.current_packages
             .lock()
             .unwrap()
             .insert(package.clone(), result_rx);
 
-        let _permit = semaphore.acquire();
+        let _permit = ctx.semaphore.acquire();
 
         let package_req = PackageReq::from_str(&package).context("Invalid package request")?;
 
@@ -88,34 +89,43 @@ pub fn install_package<'a>(
         let bar = ProgressBar::new_spinner()
             .with_message("Fetching package info")
             .with_style(bar_style.clone());
-        let bar = progress.add(bar);
+        let bar = ctx.progress.add(bar);
 
         let (_package_info, version_info) =
-            resolve_version_info(&package_req, registry_client).await?;
+            resolve_version_info(&package_req, ctx.registry_client).await?;
 
         let package = downloader::download_package(
-            registry_client,
+            ctx.registry_client,
             package_req.name.clone(),
             version_info.clone(),
             bar.clone(),
         )
         .await?;
 
+        install_package(ctx, package, &bar).await
+    })
+}
+
+fn install_package<'a>(
+    ctx: InstallContext<'a>,
+    package: FhirPackage,
+    bar: &'a ProgressBar,
+) -> BoxFuture<'a, anyhow::Result<()>> {
+    Box::pin(async move {
+        let manifest = package.read_manifest()?;
+        let package_req = format!("{}@{}", manifest.name, manifest.version);
+
+        let bar_style = ProgressStyle::with_template(&format!(
+            "{{spinner}} {}: {{msg}}",
+            style(&package_req).bold(),
+        ))
+        .unwrap();
         bar.set_style(bar_style);
         bar.set_message("Waiting for dependencies");
 
-        let manifest = package.read_manifest()?;
-
         let dependency_tasks = manifest.dependencies.iter().map(|(name, version)| {
             let package = format!("{name}@{version}");
-            install_package(
-                ctx,
-                registry_client,
-                package,
-                progress,
-                current_packages,
-                semaphore,
-            )
+            install_package_by_name(ctx, package)
         });
 
         try_join_all(dependency_tasks).await?;
@@ -131,7 +141,7 @@ pub fn install_package<'a>(
         let mut report = InstallReport::default();
 
         let install_status =
-            processor::check_package_installed(&package, ctx.fhir_client, &bar).await?;
+            processor::check_package_installed(&package, ctx.fhir_client, bar).await?;
         bar.reset();
 
         if let PackageInstallStatus::NotInstalled(missing_files) = install_status {
@@ -148,16 +158,16 @@ pub fn install_package<'a>(
             bar.set_length(index.files.len() as u64);
             report.already_existed = index.files.len() - missing_files.len();
 
-            process_files(ctx, &package, manifest, missing_files, &bar, &mut report).await?;
+            process_files(ctx, &package, manifest, missing_files, bar, &mut report).await?;
 
             bar.suspend(|| {
                 println!(
-                    "Installed package {} ({} resources created, {} errors, and {} already existed)", 
-                    style(&package_req).bold(),
-                    style(report.created).bold(),
-                    style(report.errors).bold(),
-                    style(report.already_existed).bold()
-                );
+                "Installed package {} ({} resources created, {} errors, and {} already existed)",
+                style(&package_req).bold(),
+                style(report.created).bold(),
+                style(report.errors).bold(),
+                style(report.already_existed).bold()
+            );
             })
         } else {
             bar.suspend(|| {
@@ -267,36 +277,50 @@ pub async fn process_directory(ctx: InstallContext<'_>, root_path: &Path) -> any
 
     let bar = ProgressBar::new_spinner().with_message("Loading data");
 
-    // Grouped by resource type
-    let mut resources: IndexMap<String, Vec<Resource>> = IndexMap::new();
+    if root_path.join("package").join("package.json").exists() {
+        bar.suspend(|| {
+            println!("Found package.json file, processing as FHIR package");
+        });
 
-    let paths = load_file_list(root_path)?;
-    for file_path in paths {
-        let relative_path = file_path.strip_prefix(root_path)?;
-        bar.set_message(format!("Reading file {}", relative_path.to_string_lossy()));
+        let package = FhirPackage::new(root_path.to_owned());
 
-        if let Err(err) = load_file(&mut resources, &file_path, relative_path) {
-            bar.suspend(|| {
-                let msg = format!("Warning: could not process file {relative_path:?}: {err:#}");
-                println!("{}", style(msg).yellow())
-            })
+        install_package(ctx, package, &bar).await
+    } else {
+        bar.suspend(|| {
+            println!("No package.json file found, processing as a basic directory");
+        });
+
+        // Grouped by resource type
+        let mut resources: IndexMap<String, Vec<Resource>> = IndexMap::new();
+
+        let paths = load_file_list(root_path)?;
+        for file_path in paths {
+            let relative_path = file_path.strip_prefix(root_path)?;
+            bar.set_message(format!("Reading file {}", relative_path.to_string_lossy()));
+
+            if let Err(err) = load_file(&mut resources, &file_path, relative_path) {
+                bar.suspend(|| {
+                    let msg = format!("Warning: could not process file {relative_path:?}: {err:#}");
+                    println!("{}", style(msg).yellow())
+                })
+            }
         }
+
+        bar.finish_and_clear();
+        let count: usize = resources.values().map(|resources| resources.len()).sum();
+
+        println!("{} resources loaded", style(count).bold());
+
+        let processed_count = processor::process_resources(ctx, resources).await;
+
+        println!(
+            "Successfully processed {} resources in {}",
+            style(processed_count).bold(),
+            style(HumanDuration(started_at.elapsed())).bold()
+        );
+
+        Ok(())
     }
-
-    bar.finish_and_clear();
-    let count: usize = resources.values().map(|resources| resources.len()).sum();
-
-    println!("{} resources loaded", style(count).bold());
-
-    let processed_count = processor::process_resources(ctx, resources).await;
-
-    println!(
-        "Successfully processed {} resources in {}",
-        style(processed_count).bold(),
-        style(HumanDuration(started_at.elapsed())).bold()
-    );
-
-    Ok(())
 }
 
 fn load_file(
@@ -586,7 +610,7 @@ pub async fn download(registry_client: &RegistryClient, package: &str) -> anyhow
     let output_folder = format!("{}@{}", package_req.name, version_info.version);
     fs::create_dir_all(&output_folder)?;
     fs_extra::dir::copy(
-        fhir_package.dir.join("package"),
+        fhir_package.dir,
         &output_folder,
         &CopyOptions::default().content_only(true),
     )

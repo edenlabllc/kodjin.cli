@@ -129,6 +129,8 @@ pub async fn process_resource(
         resource.set_id(id.to_string());
     }
 
+    // TODO: generate snapshot here
+
     let payload = serde_json::to_string(&resource.data)?;
     client
         .upsert(resource_type, &resource.info.id, &payload)
