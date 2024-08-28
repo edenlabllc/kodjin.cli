@@ -129,6 +129,34 @@ pub async fn process_resource(
     current_package: &str,
     bar: &ProgressBar,
 ) -> anyhow::Result<()> {
+    preprocess_resource(&mut resource, ctx, resource_type, current_index, bar).await?;
+
+    ctx.fhir_client
+        .upsert(resource_type, &resource.info.id, &resource.data)
+        .await?;
+
+    bar.suspend(|| {
+        print!(
+            "[{}] Created {resource_type} ",
+            style(current_package).bold()
+        );
+        if let Some(url) = &resource.info.url {
+            println!("{}", style(url).bold());
+        } else {
+            println!("{}", style(resource.source_path.display()).bold());
+        }
+    });
+
+    Ok(())
+}
+
+async fn preprocess_resource(
+    resource: &mut Resource,
+    ctx: InstallContext<'_>,
+    resource_type: &str,
+    current_index: &PackageIndex,
+    bar: &ProgressBar,
+) -> anyhow::Result<()> {
     if resource.data.get("url").is_some() {
         let id = Uuid::new_v4();
         resource.set_id(id.to_string());
@@ -169,22 +197,6 @@ pub async fn process_resource(
         }
     }
 
-    ctx.fhir_client
-        .upsert(resource_type, &resource.info.id, &resource.data)
-        .await?;
-
-    bar.suspend(|| {
-        print!(
-            "[{}] Created {resource_type} ",
-            style(current_package).bold()
-        );
-        if let Some(url) = &resource.info.url {
-            println!("{}", style(url).bold());
-        } else {
-            println!("{}", style(resource.source_path.display()).bold());
-        }
-    });
-
     Ok(())
 }
 
@@ -214,9 +226,13 @@ fn process_definition_snapshot_references(
             if let Some(Value::Array(element_types)) = element_definition.get_mut("type") {
                 for element_type in element_types {
                     for field in ["profile", "targetProfile"] {
-                        if let Some(Value::String(reference)) = element_type.get_mut(field) {
-                            if normalize_profile_reference(reference, current_index) {
-                                changed_count += 1;
+                        if let Some(Value::Array(profiles)) = element_type.get_mut(field) {
+                            for profile in profiles {
+                                if let Value::String(reference) = profile {
+                                    if normalize_profile_reference(reference, current_index) {
+                                        changed_count += 1;
+                                    }
+                                }
                             }
                         }
                     }
@@ -240,7 +256,7 @@ fn normalize_profile_reference(reference: &mut String, current_index: &PackageIn
         .files
         .iter()
         .filter(|file| file.resource_info.url.as_ref() == Some(&*reference))
-        .flat_map(|file| &file.resource_info.url)
+        .flat_map(|file| &file.resource_info.version)
         .max()
     {
         *reference = format!("{reference}|{max_version}");
@@ -358,4 +374,44 @@ async fn check_resource_installed(
     });
 
     Ok(exists)
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::installer::{
+        package::FhirPackage, processor::process_definition_references, resource::Resource,
+    };
+
+    #[tokio::test]
+    async fn preproces_normalize_references() {
+        let package = FhirPackage::new("./tests/hl7.fhir.us.core@4.0.0".into());
+        let index = package.read_index().unwrap();
+
+        let index_file = index
+            .files
+            .iter()
+            .find(|file| file.filename == "StructureDefinition-pediatric-weight-for-height.json")
+            .unwrap();
+
+        let raw_data = std::fs::read_to_string(package.dir.join(index_file.get_path())).unwrap();
+        let data = serde_json::from_str(&raw_data).unwrap();
+        let mut resource = Resource {
+            data,
+            info: index_file.resource_info.clone(),
+            source_path: index_file.get_path(),
+        };
+
+        process_definition_references(&mut resource.data, &index);
+
+        let target_profile = &resource
+            .data
+            .pointer("/snapshot/element/27/type/0/targetProfile")
+            .unwrap()
+            .as_array()
+            .unwrap()[0];
+        assert_eq!(
+            "http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient|4.0.0",
+            target_profile.as_str().unwrap(),
+        );
+    }
 }
