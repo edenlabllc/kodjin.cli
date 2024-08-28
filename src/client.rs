@@ -113,10 +113,11 @@ async fn handle_response_error(response: Response) -> anyhow::Result<Response> {
         Ok(response)
     } else {
         let status = response.status();
+        let url = response.url().clone();
         let body = response.text().await?;
         match serde_json::from_str::<OperationOutcome>(&body) {
             Ok(outcome) => Err(anyhow!(
-                "FHIR error (status {status}):\n{}",
+                "FHIR error (status {status} at {url}):\n{}",
                 serde_json::to_string_pretty(&outcome)
                     .unwrap()
                     .to_colored_json_auto()?

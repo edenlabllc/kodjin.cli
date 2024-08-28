@@ -126,6 +126,7 @@ pub async fn process_resource(
     resource_type: &str,
     mut resource: Resource,
     current_index: &PackageIndex,
+    current_package: &str,
     bar: &ProgressBar,
 ) -> anyhow::Result<()> {
     if resource.data.get("url").is_some() {
@@ -172,6 +173,18 @@ pub async fn process_resource(
         .upsert(resource_type, &resource.info.id, &resource.data)
         .await?;
 
+    bar.suspend(|| {
+        print!(
+            "[{}] Created {resource_type} ",
+            style(current_package).bold()
+        );
+        if let Some(url) = &resource.info.url {
+            println!("{}", style(url).bold());
+        } else {
+            println!("{}", style(resource.source_path.display()).bold());
+        }
+    });
+
     Ok(())
 }
 
@@ -198,11 +211,13 @@ fn process_definition_snapshot_references(
 
     if let Some(Value::Array(elements)) = snapshot.get_mut("element") {
         for element_definition in elements {
-            if let Some(Value::Object(element_type)) = element_definition.get_mut("type") {
-                for field in ["profile", "targetProfile"] {
-                    if let Some(Value::String(reference)) = element_type.get_mut(field) {
-                        if normalize_profile_reference(reference, current_index) {
-                            changed_count += 1;
+            if let Some(Value::Array(element_types)) = element_definition.get_mut("type") {
+                for element_type in element_types {
+                    for field in ["profile", "targetProfile"] {
+                        if let Some(Value::String(reference)) = element_type.get_mut(field) {
+                            if normalize_profile_reference(reference, current_index) {
+                                changed_count += 1;
+                            }
                         }
                     }
                 }
@@ -330,7 +345,8 @@ async fn check_resource_installed(
 
     let bundle = client
         .search::<ResourceInfo>(&resource_info.resource_type, &search_params)
-        .await?;
+        .await
+        .context("Could not search currently installed resources")?;
 
     let exists = bundle.entry.iter().any(|entry| {
         entry.resource.as_ref().is_some_and(|resource| {

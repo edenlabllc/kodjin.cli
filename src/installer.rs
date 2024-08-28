@@ -256,6 +256,7 @@ async fn process_files(
             &file.resource_info.resource_type,
             resource,
             current_index,
+            &format!("{}@{}", manifest.name, manifest.version),
             bar,
         )
         .await
