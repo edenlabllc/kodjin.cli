@@ -238,7 +238,13 @@ pub async fn info(cmd: PackageCommand) -> anyhow::Result<()> {
     installer::info(&registry_client, &cmd.name).await
 }
 
-pub async fn download(cmd: PackageCommand) -> anyhow::Result<()> {
+pub async fn download(cmd: PackageCommand, client: FhirClient) -> anyhow::Result<()> {
     let registry_client = RegistryClient::new(cmd.registry);
-    installer::download(&registry_client, &cmd.name).await
+    installer::download(
+        &registry_client,
+        &cmd.name,
+        client,
+        cmd.skip_strict_reference_versions,
+    )
+    .await
 }

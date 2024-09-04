@@ -66,6 +66,14 @@ pub struct PackageCommand {
     /// keep them as-is instead
     #[clap(long, default_value_t = false)]
     pub skip_strict_reference_versions: bool,
+    /// Perform resource preprocessing that is normally done before installation
+    ///
+    /// Currently does the following:
+    /// - Generates new resource ids for canonical resources (ones that have a url and version present)
+    /// - Generates snapshots for StructureDefinition resources where they are missing
+    /// - Makes references to other profiles within the current package in StructureDefinition resources version-specific
+    #[clap(long, default_value_t = false)]
+    pub preprocess: bool,
 }
 
 #[derive(Clone, Copy, Debug, Default, ValueEnum)]

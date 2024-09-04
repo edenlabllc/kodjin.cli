@@ -80,8 +80,18 @@ async fn process_resources_type(
                     });
 
                 if !exists {
-                    // let source_path = resource.source_path.clone();
-                    /*match process_resource(resource_type, resource,  ctx.fhir_client, bar).await {
+                    let source_path = resource.source_path.clone();
+                    let current_index = PackageIndex::default();
+                    match process_resource(
+                        ctx,
+                        resource_type,
+                        resource,
+                        &current_index,
+                        "local",
+                        bar,
+                    )
+                    .await
+                    {
                         Ok(()) => count += 1,
                         Err(err) => {
                             bar.suspend(|| {
@@ -91,8 +101,7 @@ async fn process_resources_type(
                                 println!("{}", style(msg).yellow())
                             });
                         }
-                    }*/
-                    todo!()
+                    }
                 }
             }
             Action::Uninstall => match ctx
@@ -129,7 +138,15 @@ pub async fn process_resource(
     current_package: &str,
     bar: &ProgressBar,
 ) -> anyhow::Result<()> {
-    preprocess_resource(&mut resource, ctx, resource_type, current_index, bar).await?;
+    preprocess_resource(
+        &mut resource,
+        ctx.fhir_client,
+        ctx.skip_strict_reference_versions,
+        resource_type,
+        current_index,
+        bar,
+    )
+    .await?;
 
     ctx.fhir_client
         .upsert(resource_type, &resource.info.id, &resource.data)
@@ -150,16 +167,21 @@ pub async fn process_resource(
     Ok(())
 }
 
-async fn preprocess_resource(
+/// Returns true if the resource was altered in any way
+pub async fn preprocess_resource(
     resource: &mut Resource,
-    ctx: InstallContext<'_>,
+    fhir_client: &FhirClient,
+    skip_strict_reference_versions: bool,
     resource_type: &str,
     current_index: &PackageIndex,
     bar: &ProgressBar,
-) -> anyhow::Result<()> {
+) -> anyhow::Result<bool> {
+    let mut changed = false;
+
     if resource.data.get("url").is_some() {
         let id = Uuid::new_v4();
         resource.set_id(id.to_string());
+        changed = true;
     }
 
     if resource_type == "StructureDefinition" {
@@ -172,8 +194,7 @@ async fn preprocess_resource(
                 );
             });
 
-            let mut snapshot_response = ctx
-                .fhir_client
+            let mut snapshot_response = fhir_client
                 .snapshot(&resource.data)
                 .await
                 .context("Could not generate snapshot")?;
@@ -184,20 +205,22 @@ async fn preprocess_resource(
 
             if let Some(obj) = resource.data.as_object_mut() {
                 obj.insert("snapshot".to_owned(), snapshot);
+                changed = true;
             }
         }
 
-        if !ctx.skip_strict_reference_versions {
+        if !skip_strict_reference_versions {
             let count = process_definition_references(&mut resource.data, current_index);
             if count > 0 {
                 bar.suspend(|| {
-                    println!("{}: {count} profile reference fields were normalized to contain an explicit version in profile {}", style("Note:").bold(), style(resource.source_path.display()).bold());
-                })
+                    println!("{} {count} profile reference fields were normalized to contain an explicit version in profile {}", style("Note:").bold(), style(resource.source_path.display()).bold());
+                });
+                changed = true;
             }
         }
     }
 
-    Ok(())
+    Ok(changed)
 }
 
 /// Normalizes references within the current package to point to specific versions of profiles

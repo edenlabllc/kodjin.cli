@@ -67,7 +67,7 @@ pub struct PackageManifest {
     pub dependencies: HashMap<String, String>,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Default)]
 pub struct PackageIndex {
     pub files: Vec<PackageIndexFile>,
 }

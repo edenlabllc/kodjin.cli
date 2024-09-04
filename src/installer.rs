@@ -596,7 +596,12 @@ pub async fn info(registry_client: &RegistryClient, package: &str) -> anyhow::Re
     Ok(())
 }
 
-pub async fn download(registry_client: &RegistryClient, package: &str) -> anyhow::Result<()> {
+pub async fn download(
+    registry_client: &RegistryClient,
+    package: &str,
+    fhir_client: FhirClient,
+    skip_strict_reference_versions: bool,
+) -> anyhow::Result<()> {
     let package_req = PackageReq::from_str(package)?;
 
     let bar_style = ProgressStyle::with_template(&format!(
@@ -628,6 +633,51 @@ pub async fn download(registry_client: &RegistryClient, package: &str) -> anyhow
         &CopyOptions::default().content_only(true),
     )
     .context("Could not copy files")?;
+
+    let downloaded_fhir_package = FhirPackage::new(PathBuf::from(&output_folder));
+    let index = downloaded_fhir_package.read_index()?;
+
+    for file in &index.files {
+        let file_path = downloaded_fhir_package.dir.join(file.get_path());
+        let file_contents =
+            fs::read_to_string(&file_path).context("Failed to read file in package")?;
+        let resource_data: Value =
+            serde_json::from_str(&file_contents).context("Failed to parse file")?;
+        let mut resource = Resource {
+            data: resource_data,
+            info: file.resource_info.clone(),
+            source_path: file.get_path(),
+        };
+
+        let changed = processor::preprocess_resource(
+            &mut resource,
+            &fhir_client,
+            skip_strict_reference_versions,
+            &file.resource_info.resource_type,
+            &index,
+            &bar,
+        )
+        .await
+        .with_context(|| {
+            format!(
+                "Could not preprocess resource {}",
+                file.get_path().display()
+            )
+        })?;
+
+        if changed {
+            let new_file_contents = serde_json::to_string_pretty(&resource.data)?;
+            fs::write(&file_path, new_file_contents)
+                .with_context(|| format!("Could not write to {}", file_path.display()))?;
+
+            bar.suspend(|| {
+                println!(
+                    "Preprocessed file {}",
+                    style(file.get_path().display()).bold()
+                );
+            })
+        }
+    }
 
     bar.finish_and_clear();
     println!("Package downloaded to {}", style(output_folder).bold());
