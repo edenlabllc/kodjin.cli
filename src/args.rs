@@ -62,6 +62,11 @@ pub struct PackageCommand {
     /// Registry URL for FHIR packages
     #[clap(short, long, default_value = "https://packages.simplifier.net")]
     pub registry: String,
+    /// What should be done with resources that already exist
+    ///
+    /// Note: this setting is not applied to dependencies in order to avoid accidentally overwriting resources.
+    #[clap(value_enum, long, default_value_t)]
+    pub existing_resources: ExistingResourceBehaviour,
     /// Do not change profile references to be version-specific,
     /// keep them as-is instead
     #[clap(long, default_value_t = false)]
@@ -74,6 +79,15 @@ pub struct PackageCommand {
     /// - Makes references to other profiles within the current package in StructureDefinition resources version-specific
     #[clap(long, default_value_t = false)]
     pub preprocess: bool,
+}
+
+#[derive(ValueEnum, Clone, Copy, Debug, Default)]
+pub enum ExistingResourceBehaviour {
+    /// Skip existing resources
+    #[default]
+    Skip,
+    /// Overwrite existing resources
+    Overwrite,
 }
 
 #[derive(Clone, Copy, Debug, Default, ValueEnum)]

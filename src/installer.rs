@@ -6,7 +6,10 @@ mod resource;
 
 const BASE_PACKAGE: &str = "hl7.fhir.r4.core";
 
-use crate::{client::FhirClient, print_values_table, registry::RegistryClient};
+use crate::{
+    args::ExistingResourceBehaviour, client::FhirClient, print_values_table,
+    registry::RegistryClient,
+};
 use anyhow::Context;
 use console::style;
 use deno_npm::registry::{NpmPackageInfo, NpmPackageVersionInfo};
@@ -38,6 +41,7 @@ pub struct InstallContext<'a> {
     pub semaphore: &'a Semaphore,
     pub registry_client: &'a RegistryClient,
     pub skip_strict_reference_versions: bool,
+    pub existing_resources_behaviour: ExistingResourceBehaviour,
 }
 
 #[derive(Clone, Copy)]
@@ -126,7 +130,11 @@ fn install_package<'a>(
 
         let dependency_tasks = manifest.dependencies.iter().map(|(name, version)| {
             let package = format!("{name}@{version}");
-            install_package_by_name(ctx, package)
+            let dependency_ctx = InstallContext {
+                existing_resources_behaviour: ExistingResourceBehaviour::Skip,
+                ..ctx
+            };
+            install_package_by_name(dependency_ctx, package)
         });
 
         try_join_all(dependency_tasks).await?;
@@ -141,8 +149,15 @@ fn install_package<'a>(
 
         let mut report = InstallReport::default();
 
-        let install_status =
-            processor::check_package_installed(&package, ctx.fhir_client, bar).await?;
+        let install_status = match ctx.existing_resources_behaviour {
+            ExistingResourceBehaviour::Skip => {
+                processor::check_package_installed(&package, ctx.fhir_client, bar).await?
+            }
+            ExistingResourceBehaviour::Overwrite => {
+                let index = package.read_index()?;
+                PackageInstallStatus::NotInstalled(index.files)
+            }
+        };
         bar.reset();
 
         if let PackageInstallStatus::NotInstalled(missing_files) = install_status {
