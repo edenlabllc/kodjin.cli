@@ -12,7 +12,7 @@ use clap::Parser;
 use client::FhirClient;
 use config::Config;
 use console::style;
-use std::{ops::Deref, process::ExitCode};
+use std::{ops::Deref, process::ExitCode, time::Duration};
 
 #[tokio::main(flavor = "current_thread")]
 async fn main() -> ExitCode {
@@ -31,9 +31,7 @@ async fn run(args: Args) -> anyhow::Result<()> {
     let config = Config::load_or_create()?;
 
     match args.command.clone() {
-        CliCommand::Server(cmd) => {
-            subcommands::server(cmd, config, args.insecure_certificates).await
-        }
+        CliCommand::Server(cmd) => subcommands::server(cmd, config, &args).await,
         CliCommand::Metadata => {
             let client = get_client(&config, &args)?;
             subcommands::metadata(client).await
@@ -75,6 +73,7 @@ fn get_client(config: &Config, args: &Args) -> anyhow::Result<FhirClient> {
     Ok(FhirClient::new(
         server_config.url.clone(),
         args.insecure_certificates,
+        Duration::from_secs(args.request_timeout),
     ))
 }
 

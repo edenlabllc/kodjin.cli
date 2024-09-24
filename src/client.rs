@@ -12,7 +12,7 @@ use operation_outcome::OperationOutcome;
 use reqwest::{Method, RequestBuilder, Response};
 use serde::{de::DeserializeOwned, Serialize};
 use serde_json::Value;
-use std::sync::Arc;
+use std::{sync::Arc, time::Duration};
 
 #[derive(Clone)]
 pub struct FhirClient {
@@ -21,9 +21,10 @@ pub struct FhirClient {
 }
 
 impl FhirClient {
-    pub fn new(url: String, insecure_certificates: bool) -> Self {
+    pub fn new(url: String, insecure_certificates: bool, timeout: Duration) -> Self {
         let client = reqwest::Client::builder()
             .danger_accept_invalid_certs(insecure_certificates)
+            .timeout(timeout)
             .build()
             .unwrap();
         Self {

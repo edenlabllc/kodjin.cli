@@ -12,6 +12,9 @@ pub struct Args {
     /// Skip TLS certificate validation
     #[clap(long, default_value_t = false)]
     pub insecure_certificates: bool,
+    /// Timeout for requests (in seconds)
+    #[clap(long, default_value_t = 30)]
+    pub request_timeout: u64,
 }
 
 #[derive(Subcommand, Clone, Debug)]

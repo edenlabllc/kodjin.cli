@@ -1,5 +1,5 @@
 use crate::{
-    args::{InstallType, PackageCommand, ServerCommand},
+    args::{Args, InstallType, PackageCommand, ServerCommand},
     client::FhirClient,
     config::{Config, ServerConfig},
     installer::{self, InstallContext},
@@ -12,11 +12,7 @@ use indicatif::{MultiProgress, ProgressBar};
 use std::{collections::HashMap, path::PathBuf, sync::Mutex, time::Duration};
 use tokio::sync::Semaphore;
 
-pub async fn server(
-    cmd: ServerCommand,
-    mut config: Config,
-    insecure_certificates: bool,
-) -> anyhow::Result<()> {
+pub async fn server(cmd: ServerCommand, mut config: Config, args: &Args) -> anyhow::Result<()> {
     match cmd {
         ServerCommand::List => {
             println!(
@@ -50,7 +46,11 @@ pub async fn server(
             let bar = ProgressBar::new_spinner().with_message(format!("Checking server {url}"));
             bar.enable_steady_tick(Duration::from_millis(100));
 
-            let client = FhirClient::new(url.clone(), insecure_certificates);
+            let client = FhirClient::new(
+                url.clone(),
+                args.insecure_certificates,
+                Duration::from_secs(args.request_timeout),
+            );
             let metadata = client.get_metadata().await?;
 
             config.servers.insert(name.clone(), ServerConfig { url });
