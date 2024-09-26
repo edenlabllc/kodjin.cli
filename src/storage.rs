@@ -18,3 +18,7 @@ pub fn downloads_dir() -> anyhow::Result<PathBuf> {
 pub fn packages_dir() -> anyhow::Result<PathBuf> {
     app_subdir("packages")
 }
+
+pub fn logs_dir() -> anyhow::Result<PathBuf> {
+    app_subdir("logs")
+}

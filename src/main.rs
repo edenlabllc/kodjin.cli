@@ -38,15 +38,15 @@ async fn run(args: Args) -> anyhow::Result<()> {
         }
         CliCommand::Install(cmd) => {
             let client = get_client(&config, &args)?;
-            subcommands::install(cmd, client).await
+            subcommands::install(cmd, client, args.errors_output).await
         }
         CliCommand::Uninstall(cmd) => {
             let client = get_client(&config, &args)?;
-            subcommands::uninstall(cmd, client).await
+            subcommands::uninstall(cmd, client, args.errors_output).await
         }
         CliCommand::Check(cmd) => {
             let client = get_client(&config, &args)?;
-            subcommands::check(cmd, client).await
+            subcommands::check(cmd, client, args.errors_output).await
         }
         CliCommand::Tree(cmd) => subcommands::tree(cmd).await,
         CliCommand::Info(cmd) => subcommands::info(cmd).await,

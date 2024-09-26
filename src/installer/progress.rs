@@ -5,6 +5,7 @@ use tokio::sync::watch;
 #[derive(Debug)]
 pub struct InstallProgress {
     pub state: InstallState,
+    pub full_name: String,
     pub report: InstallReport,
     pub errors: Vec<ResourceError>,
 }

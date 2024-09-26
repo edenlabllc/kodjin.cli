@@ -7,6 +7,7 @@ edition = "2021"
 anyhow = "1.0.86"
 # async-compression = { version = "0.4.12", features = ["futures-io", "gzip"] }
 async-trait = "0.1.81"
+chrono = "0.4.38"
 clap = { version = "4.5.11", features = ["derive"] }
 colored_json = "5.0.0"
 console = "0.15.8"

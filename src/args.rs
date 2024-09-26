@@ -15,6 +15,9 @@ pub struct Args {
     /// Timeout for requests (in seconds)
     #[clap(long, default_value_t = 30)]
     pub request_timeout: u64,
+    /// Where errors should be written to
+    #[clap(long, value_enum, default_value_t)]
+    pub errors_output: LogsOutput,
 }
 
 #[derive(Subcommand, Clone, Debug)]
@@ -100,5 +103,13 @@ pub enum InstallType {
     Package,
     /// Local directory
     #[value(alias("local"), alias("dir"))]
+    Directory,
+}
+
+#[derive(Clone, Copy, Debug, Default, ValueEnum)]
+pub enum LogsOutput {
+    #[default]
+    Stderr,
+    #[value(alias("dir"))]
     Directory,
 }

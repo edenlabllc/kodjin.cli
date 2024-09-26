@@ -8,11 +8,14 @@ mod resource;
 const BASE_PACKAGE: &str = "hl7.fhir.r4.core";
 
 use crate::{
-    args::ExistingResourceBehaviour, client::FhirClient, print_values_table,
+    args::{ExistingResourceBehaviour, LogsOutput},
+    client::FhirClient,
+    print_values_table,
     registry::RegistryClient,
+    storage::logs_dir,
 };
 use anyhow::Context;
-use console::style;
+use console::{strip_ansi_codes, style};
 use deno_npm::registry::{NpmPackageInfo, NpmPackageVersionInfo};
 use deno_semver::package::PackageReq;
 use fs_extra::dir::CopyOptions;
@@ -27,7 +30,9 @@ use resource::{Resource, ResourceInfo};
 use serde_json::Value;
 use std::{
     collections::HashMap,
+    fmt::Display,
     fs,
+    io::Write,
     path::{Path, PathBuf},
     sync::{Arc, Mutex},
     time::Instant,
@@ -44,6 +49,8 @@ pub struct InstallContext<'a> {
     pub registry_client: &'a RegistryClient,
     pub skip_strict_reference_versions: bool,
     pub existing_resources_behaviour: ExistingResourceBehaviour,
+    pub errors_output: LogsOutput,
+    pub start_time: chrono::DateTime<chrono::Local>,
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -85,6 +92,7 @@ pub fn install_package_by_name(
         let install_progress = Arc::new(Mutex::new(InstallProgress {
             state: InstallState::InProgress(result_rx),
             report: InstallReport::default(),
+            full_name: package.clone(), // Placeholder name until it gets replaced with something that's guarnateed to have version info
             errors: vec![],
         }));
 
@@ -115,6 +123,9 @@ pub fn install_package_by_name(
 
         let (_package_info, version_info) =
             resolve_version_info(&package_req, ctx.registry_client).await?;
+
+        install_progress.lock().unwrap().full_name =
+            format!("{}@{}", package_req.name, version_info.version);
 
         let package = downloader::download_package(
             ctx.registry_client,
@@ -268,12 +279,13 @@ async fn process_files(
             source_path: file_path.clone(),
         };
 
+        let full_name = format!("{}@{}", manifest.name, manifest.version);
         match processor::process_resource(
             ctx,
             &file.resource_info.resource_type,
             resource,
             current_index,
-            &format!("{}@{}", manifest.name, manifest.version),
+            &full_name,
             bar,
         )
         .await
@@ -284,15 +296,20 @@ async fn process_files(
             Err(err) => {
                 let path: PathBuf = file_path.components().skip(1).collect();
 
-                let msg = format!(
-                    "{} could not process file {} in package {}: {err:#}",
-                    style("Warning:").yellow(),
-                    style(path.display()).bold(),
-                    style(&manifest.name).bold(),
-                );
-                bar.suspend(|| {
-                    println!("{msg}");
-                });
+                let msg = match ctx.errors_output {
+                    LogsOutput::Stderr => {
+                        format!(
+                            "{}: could not process file {} in package {}: {err:#}",
+                            style("Warning").yellow(),
+                            style(path.display()).bold(),
+                            style(&manifest.name).bold(),
+                        )
+                    }
+                    LogsOutput::Directory => {
+                        format!("{}: {err:#}", path.display())
+                    }
+                };
+                log_resource_error(ctx, msg, &full_name, bar);
 
                 current_progress
                     .lock()
@@ -309,6 +326,12 @@ async fn process_files(
 }
 
 pub async fn process_directory(ctx: InstallContext<'_>, root_path: &Path) -> anyhow::Result<()> {
+    let pkg_name = root_path
+        .file_name()
+        .context("The provided path is invalid")?
+        .to_string_lossy()
+        .into_owned();
+
     let started_at = Instant::now();
 
     let (_tx, rx) = watch::channel(());
@@ -316,6 +339,7 @@ pub async fn process_directory(ctx: InstallContext<'_>, root_path: &Path) -> any
         state: InstallState::InProgress(rx),
         report: InstallReport::default(),
         errors: vec![],
+        full_name: pkg_name.clone(),
     }));
 
     let bar = ProgressBar::new_spinner().with_message("Loading data");
@@ -342,10 +366,13 @@ pub async fn process_directory(ctx: InstallContext<'_>, root_path: &Path) -> any
             bar.set_message(format!("Reading file {}", relative_path.to_string_lossy()));
 
             if let Err(err) = load_file(&mut resources, &file_path, relative_path) {
-                bar.suspend(|| {
-                    let msg = format!("Warning: could not process file {relative_path:?}: {err:#}");
-                    println!("{}", style(msg).yellow())
-                })
+                let msg = match ctx.errors_output {
+                    LogsOutput::Stderr => {
+                        format!("Warning: could not process file {relative_path:?}: {err:#}")
+                    }
+                    LogsOutput::Directory => format!("{relative_path:?}: {err:#}"),
+                };
+                log_resource_error(ctx, msg, &pkg_name, &bar);
             }
         }
 
@@ -357,10 +384,17 @@ pub async fn process_directory(ctx: InstallContext<'_>, root_path: &Path) -> any
         let processed_count = processor::process_resources(ctx, resources).await;
 
         println!(
-            "Successfully processed {} resources in {}",
+            "Processed {} resources in {}",
             style(processed_count).bold(),
             style(HumanDuration(started_at.elapsed())).bold()
         );
+
+        if let LogsOutput::Directory = ctx.errors_output {
+            println!(
+                "Check {} for full error info",
+                package_log_file(&pkg_name, ctx.start_time).display(),
+            );
+        }
 
         Ok(())
     }
@@ -716,6 +750,8 @@ pub async fn download(
 }
 
 pub fn print_report(ctx: InstallContext<'_>, primary_package: &str) {
+    let mut total_errors = 0;
+
     let mut progress = ctx.packages_progress.lock().unwrap();
     println!("{:?} report:", ctx.action);
     if let Some(status) = progress.remove(primary_package) {
@@ -728,10 +764,18 @@ pub fn print_report(ctx: InstallContext<'_>, primary_package: &str) {
         );
 
         if !status.errors.is_empty() {
+            total_errors += status.errors.len();
             println!("{}", style("Failed resources:").red());
 
             for error in &status.errors {
                 println!("- {}", style(error.path.display()).bold());
+            }
+
+            if let LogsOutput::Directory = ctx.errors_output {
+                println!(
+                    "Check {} for full error info",
+                    package_log_file(&status.full_name, ctx.start_time).display(),
+                );
             }
         }
     }
@@ -748,13 +792,69 @@ pub fn print_report(ctx: InstallContext<'_>, primary_package: &str) {
                 status.report
             );
 
+            total_errors += status.errors.len();
             if !status.errors.is_empty() {
                 println!("  {}", style("Failed resources:").red());
 
                 for error in &status.errors {
                     println!("  - {}", style(error.path.display()).bold());
                 }
+
+                if let LogsOutput::Directory = ctx.errors_output {
+                    println!(
+                        "  Check {} for full error info",
+                        package_log_file(&status.full_name, ctx.start_time).display(),
+                    );
+                }
             }
         }
     }
+
+    if total_errors > 0 {
+        if let LogsOutput::Stderr = ctx.errors_output {
+            println!("Check earlier logs for error info");
+        }
+    }
+}
+
+fn log_resource_error(
+    ctx: InstallContext<'_>,
+    msg: impl Display,
+    pkg_name: &str,
+    bar: &ProgressBar,
+) {
+    match ctx.errors_output {
+        LogsOutput::Stderr => bar.suspend(|| {
+            eprintln!("{msg}");
+        }),
+        LogsOutput::Directory => {
+            let path = package_log_file(pkg_name, ctx.start_time);
+            match std::fs::OpenOptions::new()
+                .append(true)
+                .create(true)
+                .open(path)
+            {
+                Ok(mut file) => {
+                    if let Err(err) = writeln!(file, "{}", strip_ansi_codes(&msg.to_string())) {
+                        eprintln!("Could not write log to file: {err}");
+                    }
+                }
+                Err(err) => {
+                    eprintln!(
+                        "{} could not open logs file for writing: {err}",
+                        style("Error:").red()
+                    );
+                }
+            }
+        }
+    }
+}
+
+fn package_log_file(pkg_name: &str, start_time: chrono::DateTime<chrono::Local>) -> PathBuf {
+    let file_name = format!(
+        "{}-{}.log",
+        pkg_name.replace('@', "-"),
+        start_time.naive_local().format("%F-%H-%M-%S")
+    );
+    logs_dir().expect("Could not open logs dir").join(file_name)
 }

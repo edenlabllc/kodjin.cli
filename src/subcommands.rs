@@ -1,5 +1,5 @@
 use crate::{
-    args::{Args, InstallType, PackageCommand, ServerCommand},
+    args::{Args, InstallType, LogsOutput, PackageCommand, ServerCommand},
     client::FhirClient,
     config::{Config, ServerConfig},
     installer::{self, InstallContext},
@@ -132,7 +132,11 @@ pub async fn metadata(client: FhirClient) -> anyhow::Result<()> {
     Ok(())
 }
 
-pub async fn install(cmd: PackageCommand, client: FhirClient) -> anyhow::Result<()> {
+pub async fn install(
+    cmd: PackageCommand,
+    client: FhirClient,
+    errors_output: LogsOutput,
+) -> anyhow::Result<()> {
     let multi_progress = MultiProgress::new();
     let semaphore = Semaphore::new(5);
 
@@ -148,6 +152,8 @@ pub async fn install(cmd: PackageCommand, client: FhirClient) -> anyhow::Result<
         registry_client: &registry_client,
         skip_strict_reference_versions: cmd.skip_strict_reference_versions,
         existing_resources_behaviour: cmd.existing_resources,
+        errors_output,
+        start_time: chrono::Local::now(),
     };
 
     match cmd.r#type {
@@ -163,7 +169,11 @@ pub async fn install(cmd: PackageCommand, client: FhirClient) -> anyhow::Result<
     Ok(())
 }
 
-pub async fn uninstall(cmd: PackageCommand, client: FhirClient) -> anyhow::Result<()> {
+pub async fn uninstall(
+    cmd: PackageCommand,
+    client: FhirClient,
+    errors_output: LogsOutput,
+) -> anyhow::Result<()> {
     let multi_progress = MultiProgress::new();
     let semaphore = Semaphore::new(5);
 
@@ -179,6 +189,8 @@ pub async fn uninstall(cmd: PackageCommand, client: FhirClient) -> anyhow::Resul
         registry_client: &registry_client,
         skip_strict_reference_versions: cmd.skip_strict_reference_versions,
         existing_resources_behaviour: cmd.existing_resources,
+        errors_output,
+        start_time: chrono::Local::now(),
     };
 
     match cmd.r#type {
@@ -194,7 +206,11 @@ pub async fn uninstall(cmd: PackageCommand, client: FhirClient) -> anyhow::Resul
     Ok(())
 }
 
-pub async fn check(cmd: PackageCommand, client: FhirClient) -> anyhow::Result<()> {
+pub async fn check(
+    cmd: PackageCommand,
+    client: FhirClient,
+    errors_output: LogsOutput,
+) -> anyhow::Result<()> {
     let multi_progress = MultiProgress::new();
     let semaphore = Semaphore::new(5);
 
@@ -210,6 +226,8 @@ pub async fn check(cmd: PackageCommand, client: FhirClient) -> anyhow::Result<()
         registry_client: &registry_client,
         skip_strict_reference_versions: cmd.skip_strict_reference_versions,
         existing_resources_behaviour: cmd.existing_resources,
+        errors_output,
+        start_time: chrono::Local::now(),
     };
 
     match cmd.r#type {
