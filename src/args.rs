@@ -1,7 +1,18 @@
 use clap::{Parser, Subcommand, ValueEnum};
 
+/// Kodjin management CLI
+///
+/// Usage examples:
+/// $ kodjin-cli server add https://demo.kodjin.com/fhir
+/// $ kodjin-cli metadata
+/// $ kodjin-cli info de.gematik.epa
+/// $ kodjin-cli install hl7.fhir.us.core@4.0.0
+/// $ kodjin-cli --errors-output=directory install hl7.fhir.us.core@4.0.0
+/// $ kodjin-cli --server=kodjin-demo check hl7.fhir.us.core@4.0.0
+///
+/// For full information, see --help for each subcommand.
 #[derive(Parser, Debug)]
-#[command(version, about)]
+#[command(version, about, verbatim_doc_comment)]
 pub struct Args {
     #[command(subcommand)]
     pub command: CliCommand,
