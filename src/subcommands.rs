@@ -143,7 +143,7 @@ pub async fn install(cmd: PackageCommand, client: FhirClient) -> anyhow::Result<
         fhir_client: &client,
         action: installer::Action::Install,
         progress: &multi_progress,
-        current_packages: &packages,
+        packages_progress: &packages,
         semaphore: &semaphore,
         registry_client: &registry_client,
         skip_strict_reference_versions: cmd.skip_strict_reference_versions,
@@ -152,7 +152,8 @@ pub async fn install(cmd: PackageCommand, client: FhirClient) -> anyhow::Result<
 
     match cmd.r#type {
         InstallType::Package => {
-            installer::install_package_by_name(ctx, cmd.name).await?;
+            installer::install_package_by_name(ctx, cmd.name.clone()).await?;
+            installer::print_report(ctx, &cmd.name);
         }
         InstallType::Directory => {
             installer::process_directory(ctx, &PathBuf::from(cmd.name)).await?;
@@ -173,7 +174,7 @@ pub async fn uninstall(cmd: PackageCommand, client: FhirClient) -> anyhow::Resul
         fhir_client: &client,
         action: installer::Action::Uninstall,
         progress: &multi_progress,
-        current_packages: &packages,
+        packages_progress: &packages,
         semaphore: &semaphore,
         registry_client: &registry_client,
         skip_strict_reference_versions: cmd.skip_strict_reference_versions,
@@ -182,7 +183,8 @@ pub async fn uninstall(cmd: PackageCommand, client: FhirClient) -> anyhow::Resul
 
     match cmd.r#type {
         InstallType::Package => {
-            installer::install_package_by_name(ctx, cmd.name).await?;
+            installer::install_package_by_name(ctx, cmd.name.clone()).await?;
+            installer::print_report(ctx, &cmd.name);
         }
         InstallType::Directory => {
             installer::process_directory(ctx, &PathBuf::from(cmd.name)).await?;
@@ -203,7 +205,7 @@ pub async fn check(cmd: PackageCommand, client: FhirClient) -> anyhow::Result<()
         fhir_client: &client,
         action: installer::Action::Install,
         progress: &multi_progress,
-        current_packages: &packages,
+        packages_progress: &packages,
         semaphore: &semaphore,
         registry_client: &registry_client,
         skip_strict_reference_versions: cmd.skip_strict_reference_versions,

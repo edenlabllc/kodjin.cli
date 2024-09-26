@@ -288,22 +288,9 @@ fn normalize_profile_reference(reference: &mut String, current_index: &PackageIn
     true
 }
 
-/// Strip the resource of server-defined values such a `lastUpdated` and `versionId`
-// fn strip_resource(data: &mut Value) {
-//     if let Some(Value::Object(meta)) = data.get_mut("meta") {
-//         meta.remove("lastUpdated");
-//         meta.remove("versionId");
-
-//         if meta.is_empty() {
-//             data.as_object_mut().unwrap().remove("meta");
-//         }
-//     }
-// }
-
 pub async fn check_package_installed(
     package: &FhirPackage,
     client: &FhirClient,
-    // progress: &MultiProgress,
     total_progress: &ProgressBar,
 ) -> anyhow::Result<PackageInstallStatus> {
     let index = package.read_index()?;
@@ -311,32 +298,9 @@ pub async fn check_package_installed(
     total_progress.reset();
     total_progress.set_length(index.files.len() as u64);
     total_progress.set_message("Checking resources");
-    // total_progress.set_style(
-    //     ProgressStyle::with_template(&format!("{spinner} {}: [{pos}/{len}] {msg} [{wide_bar}]")
-    //         .unwrap()
-    //         .progress_chars("#>-"),
-    // );
-    // let total_progress = progress
-    // // .add(
-    //     ProgressBar::new(index.files.len() as u64).with_style(
-    //         ProgressStyle::with_template("{spinner} [{pos}/{len}] {msg} [{wide_bar}]")
-    //             .unwrap()
-    //             .progress_chars("#>-"),
-    //     ),
-    // )
-    // .with_message("Checking resources");
 
     let requests = index.files.into_iter().map(|file| async {
-        // let bar = progress.add(
-        //     ProgressBar::new_spinner()
-        //         .with_message(format!("Checking {}", style(&file.filename).bold())),
-        // );
-
-        // bar.enable_steady_tick(Duration::from_millis(100));
-
         let exists = check_resource_installed(client, &file.resource_info).await?;
-
-        // bar.finish_and_clear();
 
         total_progress.inc(1);
 

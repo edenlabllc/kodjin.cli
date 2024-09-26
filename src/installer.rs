@@ -1,6 +1,7 @@
 mod downloader;
 mod package;
 mod processor;
+mod progress;
 mod report;
 mod resource;
 
@@ -20,6 +21,7 @@ use indexmap::IndexMap;
 use indicatif::{HumanDuration, MultiProgress, ProgressBar, ProgressStyle};
 use package::{FhirPackage, PackageIndex, PackageIndexFile, PackageManifest};
 use processor::PackageInstallStatus;
+use progress::{InstallProgress, InstallState, ResourceError};
 use report::InstallReport;
 use resource::{Resource, ResourceInfo};
 use serde_json::Value;
@@ -27,7 +29,7 @@ use std::{
     collections::HashMap,
     fs,
     path::{Path, PathBuf},
-    sync::Mutex,
+    sync::{Arc, Mutex},
     time::Instant,
 };
 use tokio::sync::{watch, Semaphore};
@@ -37,14 +39,14 @@ pub struct InstallContext<'a> {
     pub fhir_client: &'a FhirClient,
     pub action: Action,
     pub progress: &'a MultiProgress,
-    pub current_packages: &'a Mutex<HashMap<String, watch::Receiver<()>>>,
+    pub packages_progress: &'a Mutex<HashMap<String, Arc<Mutex<InstallProgress>>>>,
     pub semaphore: &'a Semaphore,
     pub registry_client: &'a RegistryClient,
     pub skip_strict_reference_versions: bool,
     pub existing_resources_behaviour: ExistingResourceBehaviour,
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub enum Action {
     Install,
     Uninstall,
@@ -64,7 +66,15 @@ pub fn install_package_by_name(
     package: String,
 ) -> BoxFuture<'_, anyhow::Result<()>> {
     Box::pin(async move {
-        let maybe_result_rx = ctx.current_packages.lock().unwrap().get(&package).cloned();
+        let maybe_result_rx = ctx
+            .packages_progress
+            .lock()
+            .unwrap()
+            .get(&package)
+            .and_then(|status| match &status.lock().unwrap().state {
+                InstallState::InProgress(rx) => Some(rx.clone()),
+                _ => None,
+            });
         if let Some(mut rx) = maybe_result_rx {
             let _ = rx.changed().await;
             return Ok(());
@@ -72,10 +82,16 @@ pub fn install_package_by_name(
 
         let (_result_tx, result_rx) = watch::channel(());
 
-        ctx.current_packages
+        let install_progress = Arc::new(Mutex::new(InstallProgress {
+            state: InstallState::InProgress(result_rx),
+            report: InstallReport::default(),
+            errors: vec![],
+        }));
+
+        ctx.packages_progress
             .lock()
             .unwrap()
-            .insert(package.clone(), result_rx);
+            .insert(package.clone(), install_progress.clone());
 
         let _permit = ctx.semaphore.acquire();
 
@@ -83,6 +99,7 @@ pub fn install_package_by_name(
 
         // Assume the base package is always installed
         if package_req.name == BASE_PACKAGE {
+            install_progress.lock().unwrap().state = InstallState::Skipped;
             return Ok(());
         }
 
@@ -107,13 +124,14 @@ pub fn install_package_by_name(
         )
         .await?;
 
-        install_package(ctx, package, &bar).await
+        install_package(ctx, package, install_progress, &bar).await
     })
 }
 
 fn install_package<'a>(
     ctx: InstallContext<'a>,
     package: FhirPackage,
+    current_progress: Arc<Mutex<InstallProgress>>,
     bar: &'a ProgressBar,
 ) -> BoxFuture<'a, anyhow::Result<()>> {
     Box::pin(async move {
@@ -147,8 +165,6 @@ fn install_package<'a>(
             .unwrap(),
         );
 
-        let mut report = InstallReport::default();
-
         let install_status = match ctx.existing_resources_behaviour {
             ExistingResourceBehaviour::Skip => {
                 processor::check_package_installed(&package, ctx.fhir_client, bar).await?
@@ -172,7 +188,8 @@ fn install_package<'a>(
             let index = package.read_index()?;
 
             bar.set_length(index.files.len() as u64);
-            report.already_existed = index.files.len() - missing_files.len();
+            current_progress.lock().unwrap().report.already_existed =
+                index.files.len() - missing_files.len();
 
             process_files(
                 ctx,
@@ -181,27 +198,12 @@ fn install_package<'a>(
                 missing_files,
                 &index,
                 bar,
-                &mut report,
+                &current_progress,
             )
             .await?;
-
-            bar.suspend(|| {
-                println!(
-                "Installed package {} ({} resources created, {} errors, and {} already existed)",
-                style(&package_req).bold(),
-                style(report.created).bold(),
-                style(report.errors).bold(),
-                style(report.already_existed).bold()
-            );
-            })
-        } else {
-            bar.suspend(|| {
-                println!(
-                    "Package {} is already installed",
-                    style(&package_req).bold()
-                );
-            })
         }
+
+        current_progress.lock().unwrap().state = InstallState::Completed;
 
         Ok(())
     })
@@ -231,7 +233,7 @@ async fn process_files(
     files: Vec<PackageIndexFile>,
     current_index: &PackageIndex,
     bar: &ProgressBar,
-    report: &mut InstallReport,
+    current_progress: &Mutex<InstallProgress>,
     // progress: &MultiProgress,
 ) -> anyhow::Result<()> {
     for file in files {
@@ -277,7 +279,7 @@ async fn process_files(
         .await
         {
             Ok(()) => {
-                report.created += 1;
+                current_progress.lock().unwrap().report.created += 1;
             }
             Err(err) => {
                 let path: PathBuf = file_path.components().skip(1).collect();
@@ -291,7 +293,13 @@ async fn process_files(
                 bar.suspend(|| {
                     println!("{msg}");
                 });
-                report.errors += 1;
+
+                current_progress
+                    .lock()
+                    .unwrap()
+                    .errors
+                    .push(ResourceError { path });
+                current_progress.lock().unwrap().report.errors += 1;
             }
         }
         bar.inc(1);
@@ -303,6 +311,13 @@ async fn process_files(
 pub async fn process_directory(ctx: InstallContext<'_>, root_path: &Path) -> anyhow::Result<()> {
     let started_at = Instant::now();
 
+    let (_tx, rx) = watch::channel(());
+    let current_progress = Arc::new(Mutex::new(InstallProgress {
+        state: InstallState::InProgress(rx),
+        report: InstallReport::default(),
+        errors: vec![],
+    }));
+
     let bar = ProgressBar::new_spinner().with_message("Loading data");
 
     if root_path.join("package").join("package.json").exists() {
@@ -312,7 +327,7 @@ pub async fn process_directory(ctx: InstallContext<'_>, root_path: &Path) -> any
 
         let package = FhirPackage::new(root_path.to_owned());
 
-        install_package(ctx, package, &bar).await
+        install_package(ctx, package, current_progress, &bar).await
     } else {
         bar.suspend(|| {
             println!("No package.json file found, processing as a basic directory");
@@ -698,4 +713,48 @@ pub async fn download(
     println!("Package downloaded to {}", style(output_folder).bold());
 
     Ok(())
+}
+
+pub fn print_report(ctx: InstallContext<'_>, primary_package: &str) {
+    let mut progress = ctx.packages_progress.lock().unwrap();
+    println!("{:?} report:", ctx.action);
+    if let Some(status) = progress.remove(primary_package) {
+        let status = status.lock().unwrap();
+        println!(
+            "{}: {} ({})",
+            style(primary_package).bold(),
+            status.state,
+            status.report
+        );
+
+        if !status.errors.is_empty() {
+            println!("{}", style("Failed resources:").red());
+
+            for error in &status.errors {
+                println!("- {}", style(error.path.display()).bold());
+            }
+        }
+    }
+
+    if !progress.is_empty() {
+        println!("Dependencies:");
+
+        for (name, status) in progress.iter() {
+            let status = status.lock().unwrap();
+            println!(
+                "- {}: {} ({})",
+                style(name).bold(),
+                status.state,
+                status.report
+            );
+
+            if !status.errors.is_empty() {
+                println!("  {}", style("Failed resources:").red());
+
+                for error in &status.errors {
+                    println!("  - {}", style(error.path.display()).bold());
+                }
+            }
+        }
+    }
 }
