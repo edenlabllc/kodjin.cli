@@ -1,4 +1,5 @@
 use clap::{Parser, Subcommand, ValueEnum};
+use clap_complete::Shell;
 
 /// Kodjin management CLI
 ///
@@ -51,6 +52,8 @@ pub enum CliCommand {
     Info(PackageCommand),
     /// Download a package locally
     Download(PackageCommand),
+    /// Generate command autocompletions
+    GenerateCompletions(GenerateCompletions),
 }
 
 #[derive(Subcommand, Clone, Debug)]
@@ -67,6 +70,12 @@ pub enum ServerCommand {
     Remove { name: String },
     /// Set a FHIR server as the default
     Default { name: String },
+}
+
+#[derive(Parser, Clone, Debug)]
+pub struct GenerateCompletions {
+    #[arg(value_enum)]
+    pub shell: Shell,
 }
 
 #[derive(Parser, Clone, Debug)]

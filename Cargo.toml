@@ -9,6 +9,7 @@ anyhow = "1.0.86"
 async-trait = "0.1.81"
 chrono = "0.4.38"
 clap = { version = "4.5.11", features = ["derive"] }
+clap_complete = "4.5.33"
 colored_json = "5.0.0"
 console = "0.15.8"
 deno_npm = "0.21.4"

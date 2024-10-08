@@ -8,11 +8,11 @@ mod subcommands;
 
 use anyhow::Context;
 use args::{Args, CliCommand};
-use clap::Parser;
+use clap::{CommandFactory, Parser};
 use client::FhirClient;
 use config::Config;
 use console::style;
-use std::{ops::Deref, process::ExitCode, time::Duration};
+use std::{io, ops::Deref, process::ExitCode, time::Duration};
 
 #[tokio::main(flavor = "current_thread")]
 async fn main() -> ExitCode {
@@ -53,6 +53,15 @@ async fn run(args: Args) -> anyhow::Result<()> {
         CliCommand::Download(cmd) => {
             let client = get_client(&config, &args)?;
             subcommands::download(cmd, client).await
+        }
+        CliCommand::GenerateCompletions(completions) => {
+            clap_complete::generate(
+                completions.shell,
+                &mut Args::command(),
+                Args::command().get_name(),
+                &mut io::stdout(),
+            );
+            Ok(())
         }
     }
 }
