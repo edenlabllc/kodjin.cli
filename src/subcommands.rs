@@ -159,12 +159,12 @@ pub async fn install(
     match cmd.r#type {
         InstallType::Package => {
             installer::install_package_by_name(ctx, cmd.name.clone()).await?;
-            installer::print_report(ctx, &cmd.name);
         }
         InstallType::Directory => {
-            installer::process_directory(ctx, &PathBuf::from(cmd.name)).await?;
+            installer::process_directory(ctx, &PathBuf::from(cmd.name.clone())).await?;
         }
     }
+    installer::print_report(ctx, &cmd.name);
 
     Ok(())
 }
@@ -196,12 +196,12 @@ pub async fn uninstall(
     match cmd.r#type {
         InstallType::Package => {
             installer::install_package_by_name(ctx, cmd.name.clone()).await?;
-            installer::print_report(ctx, &cmd.name);
         }
         InstallType::Directory => {
-            installer::process_directory(ctx, &PathBuf::from(cmd.name)).await?;
+            installer::process_directory(ctx, &PathBuf::from(cmd.name.clone())).await?;
         }
     }
+    installer::print_report(ctx, &cmd.name);
 
     Ok(())
 }

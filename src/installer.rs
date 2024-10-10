@@ -342,6 +342,11 @@ pub async fn process_directory(ctx: InstallContext<'_>, root_path: &Path) -> any
         full_name: pkg_name.clone(),
     }));
 
+    ctx.packages_progress
+        .lock()
+        .unwrap()
+        .insert(pkg_name.clone(), current_progress.clone());
+
     let bar = ProgressBar::new_spinner().with_message("Loading data");
 
     if root_path.join("package").join("package.json").exists() {
