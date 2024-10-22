@@ -326,9 +326,10 @@ async fn process_files(
 }
 
 pub async fn process_directory(ctx: InstallContext<'_>, root_path: &Path) -> anyhow::Result<()> {
-    let pkg_name = root_path
+    let pkg_name = fs::canonicalize(root_path)
+        .context("Invalid path provided")?
         .file_name()
-        .context("The provided path is invalid")?
+        .context("Provided path has no name")?
         .to_string_lossy()
         .into_owned();
 
