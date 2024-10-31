@@ -27,7 +27,7 @@ use processor::PackageInstallStatus;
 use progress::{InstallProgress, InstallState, ResourceError};
 use report::InstallReport;
 use resource::{Resource, ResourceInfo};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use serde_with::skip_serializing_none;
 use std::{
@@ -281,6 +281,8 @@ async fn process_files(
             source_path: file_path.clone(),
         };
 
+        let resource_info = resource.info.clone();
+
         let full_name = format!("{}@{}", manifest.name, manifest.version);
         match processor::process_resource(
             ctx,
@@ -311,7 +313,7 @@ async fn process_files(
                         format!("{}: {err:#}", path.display())
                     }
                 };
-                log_resource_error(ctx, msg, &file_path, &full_name, bar);
+                log_resource_error(ctx, msg, &file_path, &full_name, bar, Some(&resource_info));
 
                 current_progress
                     .lock()
@@ -380,7 +382,7 @@ pub async fn process_directory(ctx: InstallContext<'_>, root_path: &Path) -> any
                     }
                     LogsOutput::Directory => format!("{relative_path:?}: {err:#}"),
                 };
-                log_resource_error(ctx, msg, &file_path, &pkg_name, &bar);
+                log_resource_error(ctx, msg, &file_path, &pkg_name, &bar, None);
             }
         }
 
@@ -831,6 +833,7 @@ fn log_resource_error(
     file_path: &Path,
     pkg_name: &str,
     bar: &ProgressBar,
+    resource_info: Option<&ResourceInfo>,
 ) {
     match ctx.errors_output {
         LogsOutput::Stderr => bar.suspend(|| {
@@ -855,12 +858,10 @@ fn log_resource_error(
                         id: None,
                     };
 
-                    if let Ok(resource_contents) = fs::read_to_string(file_path) {
-                        if let Ok(info) = serde_json::from_str::<ResourceInfo>(&resource_contents) {
-                            msg.id = Some(info.id);
-                            msg.url = info.url;
-                            msg.version = info.version;
-                        }
+                    if let Some(info) = resource_info {
+                        msg.id = Some(&info.id);
+                        msg.url = info.url.as_deref();
+                        msg.version = info.version.as_deref();
                     }
 
                     let log_contents = serde_json::to_string(&msg).unwrap();
@@ -895,7 +896,7 @@ struct JsonLogMessage<'a> {
     pub package: &'a str,
     pub file: &'a Path,
     pub message: &'a str,
-    pub url: Option<String>,
-    pub version: Option<String>,
-    pub id: Option<String>,
+    pub url: Option<&'a str>,
+    pub version: Option<&'a str>,
+    pub id: Option<&'a str>,
 }
