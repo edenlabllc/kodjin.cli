@@ -27,7 +27,9 @@ use processor::PackageInstallStatus;
 use progress::{InstallProgress, InstallState, ResourceError};
 use report::InstallReport;
 use resource::{Resource, ResourceInfo};
+use serde::Serialize;
 use serde_json::Value;
+use serde_with::skip_serializing_none;
 use std::{
     collections::HashMap,
     fmt::Display,
@@ -309,7 +311,7 @@ async fn process_files(
                         format!("{}: {err:#}", path.display())
                     }
                 };
-                log_resource_error(ctx, msg, &full_name, bar);
+                log_resource_error(ctx, msg, &file_path, &full_name, bar);
 
                 current_progress
                     .lock()
@@ -378,7 +380,7 @@ pub async fn process_directory(ctx: InstallContext<'_>, root_path: &Path) -> any
                     }
                     LogsOutput::Directory => format!("{relative_path:?}: {err:#}"),
                 };
-                log_resource_error(ctx, msg, &pkg_name, &bar);
+                log_resource_error(ctx, msg, &file_path, &pkg_name, &bar);
             }
         }
 
@@ -826,6 +828,7 @@ pub fn print_report(ctx: InstallContext<'_>, primary_package: &str) {
 fn log_resource_error(
     ctx: InstallContext<'_>,
     msg: impl Display,
+    file_path: &Path,
     pkg_name: &str,
     bar: &ProgressBar,
 ) {
@@ -841,7 +844,28 @@ fn log_resource_error(
                 .open(path)
             {
                 Ok(mut file) => {
-                    if let Err(err) = writeln!(file, "{}", strip_ansi_codes(&msg.to_string())) {
+                    let text = msg.to_string();
+
+                    let mut msg = JsonLogMessage {
+                        package: pkg_name,
+                        file: file_path,
+                        message: &strip_ansi_codes(&text),
+                        url: None,
+                        version: None,
+                        id: None,
+                    };
+
+                    if let Ok(resource_contents) = fs::read_to_string(file_path) {
+                        if let Ok(info) = serde_json::from_str::<ResourceInfo>(&resource_contents) {
+                            msg.id = Some(info.id);
+                            msg.url = info.url;
+                            msg.version = info.version;
+                        }
+                    }
+
+                    let log_contents = serde_json::to_string(&msg).unwrap();
+
+                    if let Err(err) = writeln!(file, "{}", log_contents) {
                         eprintln!("Could not write log to file: {err}");
                     }
                 }
@@ -858,9 +882,20 @@ fn log_resource_error(
 
 fn package_log_file(pkg_name: &str, start_time: chrono::DateTime<chrono::Local>) -> PathBuf {
     let file_name = format!(
-        "{}-{}.log",
+        "{}-{}.ndjson",
         pkg_name.replace('@', "-"),
         start_time.naive_local().format("%F-%H-%M-%S")
     );
     logs_dir().expect("Could not open logs dir").join(file_name)
+}
+
+#[skip_serializing_none]
+#[derive(Serialize)]
+struct JsonLogMessage<'a> {
+    pub package: &'a str,
+    pub file: &'a Path,
+    pub message: &'a str,
+    pub url: Option<String>,
+    pub version: Option<String>,
+    pub id: Option<String>,
 }
