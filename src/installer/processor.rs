@@ -3,8 +3,8 @@ use super::{
     resource::{Resource, ResourceInfo},
     Action, InstallContext,
 };
-use crate::client::FhirClient;
-use anyhow::Context;
+use crate::client::{FhirClient, FhirError};
+use anyhow::{anyhow, Context};
 use console::style;
 use futures::{stream, StreamExt, TryStreamExt};
 use indexmap::IndexMap;
@@ -137,7 +137,7 @@ pub async fn process_resource(
     current_index: &PackageIndex,
     current_package: &str,
     bar: &ProgressBar,
-) -> anyhow::Result<()> {
+) -> Result<(), FhirError> {
     preprocess_resource(
         &mut resource,
         ctx.fhir_client,
@@ -175,7 +175,7 @@ pub async fn preprocess_resource(
     resource_type: &str,
     current_index: &PackageIndex,
     bar: &ProgressBar,
-) -> anyhow::Result<bool> {
+) -> Result<bool, FhirError> {
     let mut changed = false;
 
     if resource.data.get("url").is_some() {
@@ -194,14 +194,15 @@ pub async fn preprocess_resource(
                 );
             });
 
-            let mut snapshot_response = fhir_client
-                .snapshot(&resource.data)
-                .await
-                .context("Could not generate snapshot")?;
+            let mut snapshot_response = fhir_client.snapshot(&resource.data).await?;
             let snapshot = snapshot_response
                 .as_object_mut()
                 .and_then(|obj| obj.remove("snapshot"))
-                .context("Snapshot operation response does not have snapshot field")?;
+                .ok_or_else(|| {
+                    FhirError::Other(anyhow!(
+                        "Snapshot operation response does not have snapshot field"
+                    ))
+                })?;
 
             if let Some(obj) = resource.data.as_object_mut() {
                 obj.insert("snapshot".to_owned(), snapshot);

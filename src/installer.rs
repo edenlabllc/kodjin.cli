@@ -9,7 +9,7 @@ const BASE_PACKAGE: &str = "hl7.fhir.r4.core";
 
 use crate::{
     args::{ExistingResourceBehaviour, LogsOutput},
-    client::FhirClient,
+    client::{operation_outcome::OperationOutcome, FhirClient, FhirError},
     print_values_table,
     registry::RegistryClient,
     storage::logs_dir,
@@ -27,12 +27,11 @@ use processor::PackageInstallStatus;
 use progress::{InstallProgress, InstallState, ResourceError};
 use report::InstallReport;
 use resource::{Resource, ResourceInfo};
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 use serde_json::Value;
 use serde_with::skip_serializing_none;
 use std::{
     collections::HashMap,
-    fmt::Display,
     fs,
     io::Write,
     path::{Path, PathBuf},
@@ -297,23 +296,17 @@ async fn process_files(
             Ok(()) => {
                 current_progress.lock().unwrap().report.created += 1;
             }
-            Err(err) => {
+            Err(error) => {
                 let path: PathBuf = file_path.components().skip(1).collect();
 
-                let msg = match ctx.errors_output {
-                    LogsOutput::Stderr => {
-                        format!(
-                            "{}: could not process file {} in package {}: {err:#}",
-                            style("Warning").yellow(),
-                            style(path.display()).bold(),
-                            style(&manifest.name).bold(),
-                        )
-                    }
-                    LogsOutput::Directory => {
-                        format!("{}: {err:#}", path.display())
-                    }
-                };
-                log_resource_error(ctx, msg, &file_path, &full_name, bar, Some(&resource_info));
+                log_resource_error(
+                    ctx,
+                    error,
+                    &file_path,
+                    &full_name,
+                    bar,
+                    Some(&resource_info),
+                );
 
                 current_progress
                     .lock()
@@ -375,14 +368,15 @@ pub async fn process_directory(ctx: InstallContext<'_>, root_path: &Path) -> any
             let relative_path = file_path.strip_prefix(root_path)?;
             bar.set_message(format!("Reading file {}", relative_path.to_string_lossy()));
 
-            if let Err(err) = load_file(&mut resources, &file_path, relative_path) {
-                let msg = match ctx.errors_output {
-                    LogsOutput::Stderr => {
-                        format!("Warning: could not process file {relative_path:?}: {err:#}")
-                    }
-                    LogsOutput::Directory => format!("{relative_path:?}: {err:#}"),
-                };
-                log_resource_error(ctx, msg, &file_path, &pkg_name, &bar, None);
+            if let Err(error) = load_file(&mut resources, &file_path, relative_path) {
+                log_resource_error(
+                    ctx,
+                    FhirError::Other(error),
+                    &file_path,
+                    &pkg_name,
+                    &bar,
+                    None,
+                );
             }
         }
 
@@ -829,7 +823,7 @@ pub fn print_report(ctx: InstallContext<'_>, primary_package: &str) {
 
 fn log_resource_error(
     ctx: InstallContext<'_>,
-    msg: impl Display,
+    error: FhirError,
     file_path: &Path,
     pkg_name: &str,
     bar: &ProgressBar,
@@ -837,7 +831,12 @@ fn log_resource_error(
 ) {
     match ctx.errors_output {
         LogsOutput::Stderr => bar.suspend(|| {
-            eprintln!("{msg}");
+            eprintln!(
+                "{}: could not process file {} in package {}: {error}",
+                style("Warning").yellow(),
+                style(file_path.display()).bold(),
+                style(&pkg_name).bold(),
+            )
         }),
         LogsOutput::Directory => {
             let path = package_log_file(pkg_name, ctx.start_time);
@@ -847,20 +846,35 @@ fn log_resource_error(
                 .open(path)
             {
                 Ok(mut file) => {
-                    let text = msg.to_string();
-
                     let mut msg = JsonLogMessage {
                         package: pkg_name,
                         file: file_path,
-                        message: &strip_ansi_codes(&text),
+                        error: None,
+                        status_code: None,
+                        outcome: None,
                         url: None,
                         version: None,
                         id: None,
                     };
 
+                    match &error {
+                        FhirError::Outcome {
+                            status,
+                            outcome,
+                            url,
+                        } => {
+                            msg.status_code = Some(status.as_u16());
+                            msg.outcome = Some(outcome);
+                            msg.url = Some(url.as_str());
+                        }
+                        FhirError::Other(_) => {
+                            msg.error = Some(strip_ansi_codes(&error.to_string()).into_owned());
+                        }
+                    }
+
                     if let Some(info) = resource_info {
                         msg.id = Some(&info.id);
-                        msg.url = info.url.as_deref();
+                        msg.url = msg.url.or(info.url.as_deref());
                         msg.version = info.version.as_deref();
                     }
 
@@ -895,7 +909,9 @@ fn package_log_file(pkg_name: &str, start_time: chrono::DateTime<chrono::Local>)
 struct JsonLogMessage<'a> {
     pub package: &'a str,
     pub file: &'a Path,
-    pub message: &'a str,
+    pub error: Option<String>,
+    pub status_code: Option<u16>,
+    pub outcome: Option<&'a OperationOutcome>,
     pub url: Option<&'a str>,
     pub version: Option<&'a str>,
     pub id: Option<&'a str>,

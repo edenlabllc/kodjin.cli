@@ -2,17 +2,17 @@ mod bundle;
 mod capability_statement;
 mod codeable_concept;
 mod coding;
-mod operation_outcome;
+pub mod operation_outcome;
 
 use anyhow::anyhow;
 use bundle::Bundle;
 use capability_statement::CapabilityStatement;
 use colored_json::ToColoredJson;
 use operation_outcome::OperationOutcome;
-use reqwest::{Method, RequestBuilder, Response};
+use reqwest::{Method, RequestBuilder, Response, StatusCode, Url};
 use serde::{de::DeserializeOwned, Serialize};
 use serde_json::Value;
-use std::{sync::Arc, time::Duration};
+use std::{fmt, sync::Arc, time::Duration};
 
 #[derive(Clone)]
 pub struct FhirClient {
@@ -44,7 +44,7 @@ impl FhirClient {
         resource_type: &str,
         id: &str,
         payload: &impl Serialize,
-    ) -> anyhow::Result<Value> {
+    ) -> Result<Value, FhirError> {
         let response = self
             .request(Method::PUT, &format!("/{resource_type}/{id}"))
             .json(payload)
@@ -66,7 +66,7 @@ impl FhirClient {
         }
     }*/
 
-    pub async fn snapshot(&self, payload: &impl Serialize) -> anyhow::Result<Value> {
+    pub async fn snapshot(&self, payload: &impl Serialize) -> Result<Value, FhirError> {
         let response = self
             .request(Method::POST, "/StructureDefinition/$snapshot")
             .json(payload)
@@ -79,7 +79,7 @@ impl FhirClient {
         &self,
         resource_type: &str,
         params: &[(&str, &str)],
-    ) -> anyhow::Result<Bundle<T>> {
+    ) -> Result<Bundle<T>, FhirError> {
         let response = self
             .request(Method::GET, &format!("/{resource_type}"))
             .query(params)
@@ -90,7 +90,7 @@ impl FhirClient {
         Ok(bundle)
     }
 
-    pub async fn delete(&self, resource_type: &str, id: &str) -> anyhow::Result<()> {
+    pub async fn delete(&self, resource_type: &str, id: &str) -> Result<(), FhirError> {
         self.request(Method::DELETE, &format!("/{resource_type}/{id}"))
             .send()
             .await?
@@ -98,7 +98,7 @@ impl FhirClient {
         Ok(())
     }
 
-    pub async fn get_metadata(&self) -> anyhow::Result<CapabilityStatement> {
+    pub async fn get_metadata(&self) -> Result<CapabilityStatement, FhirError> {
         Ok(self
             .request(Method::GET, "/metadata")
             .send()
@@ -109,7 +109,7 @@ impl FhirClient {
     }
 }
 
-async fn handle_response_error(response: Response) -> anyhow::Result<Response> {
+async fn handle_response_error(response: Response) -> Result<Response, FhirError> {
     if response.status().is_success() {
         Ok(response)
     } else {
@@ -117,13 +117,54 @@ async fn handle_response_error(response: Response) -> anyhow::Result<Response> {
         let url = response.url().clone();
         let body = response.text().await?;
         match serde_json::from_str::<OperationOutcome>(&body) {
-            Ok(outcome) => Err(anyhow!(
-                "FHIR error (status {status} at {url}):\n{}",
-                serde_json::to_string_pretty(&outcome)
-                    .unwrap()
-                    .to_colored_json_auto()?
-            )),
-            Err(_) => Err(anyhow!("Server error (status {status}): \"{body}\"")),
+            Ok(outcome) => Err(FhirError::Outcome {
+                status,
+                outcome,
+                url,
+            }),
+            Err(_) => Err(FhirError::Other(anyhow!(
+                "Server error (status {status}): \"{body}\""
+            ))),
         }
     }
 }
+
+#[derive(Debug)]
+pub enum FhirError {
+    Outcome {
+        status: StatusCode,
+        outcome: OperationOutcome,
+        url: Url,
+    },
+    Other(anyhow::Error),
+}
+
+impl fmt::Display for FhirError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            FhirError::Outcome {
+                status,
+                outcome,
+                url,
+            } => {
+                write!(
+                    f,
+                    "FHIR error (status {status} at {url}):\n{}",
+                    serde_json::to_string_pretty(&outcome)
+                        .unwrap()
+                        .to_colored_json_auto()
+                        .unwrap()
+                )
+            }
+            FhirError::Other(error) => write!(f, "{error:#}"),
+        }
+    }
+}
+
+impl From<reqwest::Error> for FhirError {
+    fn from(err: reqwest::Error) -> Self {
+        Self::Other(err.into())
+    }
+}
+
+impl std::error::Error for FhirError {}
