@@ -12,7 +12,6 @@ use crate::{
     client::{operation_outcome::OperationOutcome, FhirClient, FhirError},
     print_values_table,
     registry::RegistryClient,
-    storage::logs_dir,
 };
 use anyhow::Context;
 use console::{strip_ansi_codes, style};
@@ -50,7 +49,7 @@ pub struct InstallContext<'a> {
     pub registry_client: &'a RegistryClient,
     pub skip_strict_reference_versions: bool,
     pub existing_resources_behaviour: ExistingResourceBehaviour,
-    pub errors_output: LogsOutput,
+    pub errors_output: &'a LogsOutput,
     pub start_time: chrono::DateTime<chrono::Local>,
 }
 
@@ -393,10 +392,10 @@ pub async fn process_directory(ctx: InstallContext<'_>, root_path: &Path) -> any
             style(HumanDuration(started_at.elapsed())).bold()
         );
 
-        if let LogsOutput::Directory = ctx.errors_output {
+        if let Some(dir) = ctx.errors_output.get_dir() {
             println!(
                 "Check {} for full error info",
-                package_log_file(&pkg_name, ctx.start_time).display(),
+                package_log_file(&dir, &pkg_name, ctx.start_time).display(),
             );
         }
 
@@ -775,10 +774,10 @@ pub fn print_report(ctx: InstallContext<'_>, primary_package: &str) {
                 println!("- {}", style(error.path.display()).bold());
             }
 
-            if let LogsOutput::Directory = ctx.errors_output {
+            if let Some(dir) = ctx.errors_output.get_dir() {
                 println!(
                     "Check {} for full error info",
-                    package_log_file(&status.full_name, ctx.start_time).display(),
+                    package_log_file(&dir, &status.full_name, ctx.start_time).display(),
                 );
             }
         }
@@ -804,10 +803,10 @@ pub fn print_report(ctx: InstallContext<'_>, primary_package: &str) {
                     println!("  - {}", style(error.path.display()).bold());
                 }
 
-                if let LogsOutput::Directory = ctx.errors_output {
+                if let Some(dir) = ctx.errors_output.get_dir() {
                     println!(
                         "  Check {} for full error info",
-                        package_log_file(&status.full_name, ctx.start_time).display(),
+                        package_log_file(&dir, &status.full_name, ctx.start_time).display(),
                     );
                 }
             }
@@ -838,8 +837,9 @@ fn log_resource_error(
                 style(&pkg_name).bold(),
             )
         }),
-        LogsOutput::Directory => {
-            let path = package_log_file(pkg_name, ctx.start_time);
+        LogsOutput::Directory | LogsOutput::Custom(_) => {
+            let logs_dir = ctx.errors_output.get_dir().unwrap();
+            let path = package_log_file(&logs_dir, pkg_name, ctx.start_time);
             match std::fs::OpenOptions::new()
                 .append(true)
                 .create(true)
@@ -895,13 +895,17 @@ fn log_resource_error(
     }
 }
 
-fn package_log_file(pkg_name: &str, start_time: chrono::DateTime<chrono::Local>) -> PathBuf {
+fn package_log_file(
+    logs_dir: &Path,
+    pkg_name: &str,
+    start_time: chrono::DateTime<chrono::Local>,
+) -> PathBuf {
     let file_name = format!(
         "{}-{}.ndjson",
         pkg_name.replace('@', "-"),
         start_time.naive_local().format("%F-%H-%M-%S")
     );
-    logs_dir().expect("Could not open logs dir").join(file_name)
+    logs_dir.join(file_name)
 }
 
 #[skip_serializing_none]

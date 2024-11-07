@@ -1,5 +1,8 @@
 use clap::{Parser, Subcommand, ValueEnum};
 use clap_complete::Shell;
+use std::{convert::Infallible, fmt, path::PathBuf, str::FromStr};
+
+use crate::storage::logs_dir;
 
 /// Kodjin management CLI
 ///
@@ -27,8 +30,11 @@ pub struct Args {
     /// Timeout for requests (in seconds)
     #[clap(long, default_value_t = 30)]
     pub request_timeout: u64,
-    /// Where errors should be written to
-    #[clap(long, value_enum, default_value_t)]
+    /// Where errors should be written to.
+    ///
+    /// Can be either `stderr` (default), `directory` for the default logs directory
+    /// or a custom path.
+    #[clap(long, default_value_t)]
     pub errors_output: LogsOutput,
 }
 
@@ -126,10 +132,44 @@ pub enum InstallType {
     Directory,
 }
 
-#[derive(Clone, Copy, Debug, Default, ValueEnum)]
+#[derive(Clone, Debug, Default)]
 pub enum LogsOutput {
     #[default]
     Stderr,
-    #[value(alias("dir"))]
     Directory,
+    Custom(String),
+}
+
+impl LogsOutput {
+    pub fn get_dir(&self) -> Option<PathBuf> {
+        match self {
+            LogsOutput::Stderr => None,
+            LogsOutput::Directory => Some(logs_dir().expect("Could not get logs dir")),
+            LogsOutput::Custom(path) => Some(PathBuf::from(path)),
+        }
+    }
+}
+
+impl FromStr for LogsOutput {
+    type Err = Infallible;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let out = match s {
+            "stderr" => Self::Stderr,
+            "directory" => Self::Directory,
+            _ => LogsOutput::Custom(s.to_owned()),
+        };
+        Ok(out)
+    }
+}
+
+impl fmt::Display for LogsOutput {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let s = match self {
+            LogsOutput::Stderr => "stderr",
+            LogsOutput::Directory => "directory",
+            LogsOutput::Custom(value) => value,
+        };
+        s.fmt(f)
+    }
 }

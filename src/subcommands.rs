@@ -152,7 +152,7 @@ pub async fn install(
         registry_client: &registry_client,
         skip_strict_reference_versions: cmd.skip_strict_reference_versions,
         existing_resources_behaviour: cmd.existing_resources,
-        errors_output,
+        errors_output: &errors_output,
         start_time: chrono::Local::now(),
     };
 
@@ -189,7 +189,7 @@ pub async fn uninstall(
         registry_client: &registry_client,
         skip_strict_reference_versions: cmd.skip_strict_reference_versions,
         existing_resources_behaviour: cmd.existing_resources,
-        errors_output,
+        errors_output: &errors_output,
         start_time: chrono::Local::now(),
     };
 
@@ -226,7 +226,7 @@ pub async fn check(
         registry_client: &registry_client,
         skip_strict_reference_versions: cmd.skip_strict_reference_versions,
         existing_resources_behaviour: cmd.existing_resources,
-        errors_output,
+        errors_output: &errors_output,
         start_time: chrono::Local::now(),
     };
 
