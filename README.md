@@ -7,7 +7,8 @@
 - [Update](#update)
 - [Getting Started](#getting-started)
 - [Synopsis](#synopsis)
-- [Basic options](#basic-options)
+- [Command auto-completion](#command-auto-completion)
+- [Global options](#global-options)
    - [-s, --server \<SERVER\>](#-s---server-server)
    - [--insecure-certificates](#--insecure-certificates)
    - [--request-timeout <REQUEST_TIMEOUT>](#--request-timeout-request_timeout)
@@ -16,7 +17,11 @@
    - [-V, --version](#-v---version)
 - [Comands](#comands)
     - [server](#server)
-        - [Options for server](#options-for-server)
+        - [add](#options-for-server)
+        - [default](#default)
+        - [help](#help-1)
+        - [list](#list)
+        - [remove](#remove)
     - [metadata](#metadata)
     - [install](#install)
     - [uninstall](#uninstall)
@@ -56,22 +61,86 @@ kodjin-cli [OPTIONS] <COMMAND> [OPTIONS]
 ```
 Where
 - `<COMMAND>`: Specifies the operation that you want to perform
-- `[OPTIONS]`: Specifies configuration for the operation. Kodjin-cli has basic options and options for each operation.
+- `[OPTIONS]`: Specifies configuration for the operation. Kodjin-cli has options for kodjin-cli and options for each operation of kodjin-cli.
 
-If you need help, run `kodjin-cli help` from the terminal window.
+Here’s a breakdown of the primary commands:
+```bash
+$ kodjin-cli --version
+$ kodjin-cli server add https://demo.kodjin.com/fhir
+$ kodjin-cli metadata
+$ kodjin-cli info hl7.fhir.us.core@4.0.0
+```
 
+If you need help, run `kodjin-cli --help` from the terminal window.
 
-## Basic options
+## Command auto-completion
 
-The Kodjin-cli supports several commands for managing IGs. Below is a list of commands with descriptions and examples.
+The Kodjin-cli includes a command auto-completion feature that enables you to use the **Tab** key to complete a partially entered command.
+
+How it works?
+
+When you enter a part of the command after a `kodjin-cli` you can press **Tab** and command auto-completion either automatically completes your command or displays a suggested list of commands.
+
+For example, if you enter `kodjin-cli in` and press **Tab** then kodjin-cli will suggest you options to choose
+```bash
+$ kodjin-cli in[Tab]
+info     -- Show information about a FHIR package
+install  -- Install a FHIR package
+```  
+
+If you enter `kodjin-cli ins` and press **Tab** then kodjin-cli will autocomplete the command
+```bash 
+$ kodjin-cli install
+```
+
+## Global options
+
+When running kodjin-cli, you can specify global options to customize its behavior. For instance, you may choose an output folder for logs or define a specific server if it differs from the default. Below is a list of available options, along with descriptions and usage examples.
+
+In case opation uses an argument they should be separated with a space. In this documentation arguments are mentioned in angle brackets 
 
 ### -s, --server \<SERVER\>
 
-Select which FHIR server to use. The default one will be used if not specified
+If you want to use server that differ from defaulf you can add `--server` option. To see the default version of the server use [server list command](#list)
+
+Syntax:
+```bash
+$ kodjin-cli --server <server>
+```
+
+Example:
+
+In this example we will check what sever is default and then use for installing ID to the one that is not default
+```bash
+$ kodjin-cli server list
+
+List of currently configured servers:
+- https://production.com/fhir (default)
+- https://develop.com/fhir
+
+$ kodjin-cli --server https://develop.com/fhir install hl7.fhir.us.core@4.0.0
+```
+
+If you want to instal IG to your default server https://production.com/fhir`, then you do not need to use this flag
+
 
 ### --insecure-certificates
 
-Skip TLS certificate validation
+Skips TLS (Transport Layer Security) certificate validation, allowing connections to servers with self-signed or invalid certificates. 
+
+> Note: This option should be used with caution and only in trusted development or testing environments, as it bypasses a key security measure.
+
+Syntax:
+```bash
+$ kodjin-cli --insecure-certificates
+```
+
+Example:
+
+In this example, we will install the specified Implementation Guide without verifying the server's TLS certificate.
+```bash
+$ kodjin-cli --insecure-certificates install hl7.fhir.us.core@4.0.0
+```
 
 ### --request-timeout <REQUEST_TIMEOUT>
 
@@ -191,11 +260,26 @@ Print version
 
 ## Comands
 
+The Kodjin-cli supports several commands for managing IGs. Below is a list of commands with descriptions and examples.
+
 ### server
 
 Manage FHIR server URLs
 
-#### Options for server
+#### add      
+-- Add a new FHIR server with the provided URL
+
+#### default  
+-- Set a FHIR server as the default
+
+#### help
+-- Print this message or the help of the given subcommand(s)
+
+#### list
+-- List currently configured servers
+
+#### remove
+-- Remove a FHIR server
 
 ### metadata
 
