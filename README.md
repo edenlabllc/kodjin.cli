@@ -2,35 +2,37 @@
 
 ## Contents
 
-- [Overview](#overview)
-- [Installation](#installation)
-- [Update](#update)
-- [Getting Started](#getting-started)
-- [Synopsis](#synopsis)
-- [Command auto-completion](#command-auto-completion)
-- [Global options](#global-options)
-   - [-s, --server \<SERVER\>](#-s---server-server)
-   - [--insecure-certificates](#--insecure-certificates)
-   - [--request-timeout <REQUEST_TIMEOUT>](#--request-timeout-request_timeout)
-   - [--errors-output <ERRORS_OUTPUT>](#--errors-output-errors_output)
-   - [-h, --help](#-h---help)
-   - [-V, --version](#-v---version)
-- [Comands](#comands)
-    - [server](#server)
-        - [add](#options-for-server)
-        - [default](#default)
+- [Kodjin cli documentation](#kodjin-cli-documentation)
+    - [Contents](#contents)
+    - [Overview](#overview)
+    - [Installation](#installation)
+    - [Update](#update)
+    - [Getting Started](#getting-started)
+    - [Synopsis](#synopsis)
+    - [Command auto-completion](#command-auto-completion)
+    - [Global options](#global-options)
+        - [-s, --server \<SERVER\>](#-s---server-server)
+        - [--insecure-certificates](#--insecure-certificates)
+        - [--request-timeout \<REQUEST\_TIMEOUT\>](#--request-timeout-request_timeout)
+        - [--errors-output \<ERRORS\_OUTPUT\>](#--errors-output-errors_output)
+        - [-h, --help](#-h---help)
+        - [-V, --version](#-v---version)
+    - [Comands](#comands)
+        - [server](#server)
+            - [add](#add)
+            - [default](#default)
+            - [help](#help)
+            - [list](#list)
+            - [remove](#remove)
+        - [metadata](#metadata)
+        - [install](#install)
+        - [uninstall](#uninstall)
+        - [check](#check)
+        - [tree](#tree)
+        - [info](#info)
+        - [download](#download)
+        - [generate-completions](#generate-completions)
         - [help](#help-1)
-        - [list](#list)
-        - [remove](#remove)
-    - [metadata](#metadata)
-    - [install](#install)
-    - [uninstall](#uninstall)
-    - [check](#check)
-    - [tree](#tree)
-    - [info](#info)
-    - [download](#download)
-    - [generate-completions](#generate-completions)
-    - [help](#help)
 
 ## Overview
 
@@ -110,7 +112,7 @@ $ kodjin-cli --server <server>
 
 Example:
 
-In this example we will check what sever is default and then use for installing ID to the one that is not default
+In this example we will check what is the default sever is and then use for installing IG to the one that is not default
 ```bash
 $ kodjin-cli server list
 
@@ -144,11 +146,51 @@ $ kodjin-cli --insecure-certificates install hl7.fhir.us.core@4.0.0
 
 ### --request-timeout <REQUEST_TIMEOUT>
 
-Timeout for requests (in seconds) [default: 30]
+Limit the waiting time of the response to REQUEST_TIMEOUT (in seconds). The default value is 30 sec. If you want to wait more or less you can change this value by adding `--request-timeout` to the request.
+
+Syntax:
+```bash
+$ kodjin-cli --request-timeout <number>
+```
+
+Example:
+
+In this example, we will increase waiting time for the response
+```bash
+$ kodjin-cli --request-timeout 40 install hl7.fhir.us.core@4.0.0
+```
+
 
 ### --errors-output <ERRORS_OUTPUT>
 
-Where errors should be written to [default: stderr] [possible values: stderr, directory]
+Specifies the output location for error logs generated when working with Implementation Guides (IGs). This option allows you to control where error messages are displayed or saved.
+
+Available Options:
+
+- `stderr` – processed files, Implementation Guides (IGs), OperationOutcomes are written directly to the console. This is the default value.
+- `directory` – titles of IGs and files processed are written to the console, but OperationOutcomes are saved in newline-delimited JSON (.ndjson) files within the default directory.
+
+Each system has its own default directory:
+| Platform | Value                                | Example                                         |
+| -------- | ------------------------------------ | ----------------------------------------------- |
+| Linux    | $XDS_DATA_HOME or $HOME/.local/share | /home/\<username\>/.local/share                 |
+| macOS    | $HOME/Library/Application Support    | /Users/\<username\>/Library/Application Support |
+| Windows  | {FOLDER_LocalAppData}                | C:\Users\\<username\>\AppData\Local             |
+
+-  `folder path` - instead of writing OperationOutcome .ndjson files to the default directory you can choose any directory that is 
+
+Syntax:
+```bash
+$ kodjin-cli --errors-output=<stderr|directory|folder path> <command>
+```
+
+Examples:
+
+As `stderr` is a default value to use this value we do not need to add an option
+
+```bash
+$ kodjin-cli install hl7.fhir.au.base@4.2.2-ballot
+```
 
 ### -h, --help
 
@@ -258,6 +300,13 @@ Options:
 
 Print version
 
+Examples:
+
+```bash
+$ kodjin-cli --version
+kodjin-cli 0.1.0
+```
+
 ## Comands
 
 The Kodjin-cli supports several commands for managing IGs. Below is a list of commands with descriptions and examples.
@@ -269,17 +318,62 @@ Manage FHIR server URLs
 #### add      
 -- Add a new FHIR server with the provided URL
 
+Examples:
+
+```bash
+$ kodjin-cli server add https://demo.kodjin.com/fhir
+Added server https://demo.kodjin.com/fhir running Kodjin FHIR Server v4.5.0
+```
+
 #### default  
 -- Set a FHIR server as the default
+
+Examples:
+```bash
+$ kodjin-cli server default https://demo.kodjin.com/fhir
+Setting https://demo.kodjin.com/fhir as the default server
+```
 
 #### help
 -- Print this message or the help of the given subcommand(s)
 
+Examples:
+```bash
+$ kodjin-cli server --help
+Manage FHIR server URLs
+
+Usage: kodjin-cli server <COMMAND>
+
+Commands:
+  list     List currently configured servers
+  add      Add a new FHIR server with the provided URL
+  remove   Remove a FHIR server
+  default  Set a FHIR server as the default
+  help     Print this message or the help of the given subcommand(s)
+
+Options:
+  -h, --help  Print help
+```
+
 #### list
 -- List currently configured servers
 
+Examples:
+```bash
+$ kodjin-cli server list
+List of currently configured servers:
+- https://example.fhir.server/r4
+- https://demo.kodjin.com/fhir (default)
+```
+
 #### remove
 -- Remove a FHIR server
+
+Examples:
+```bash
+$ kodjin-cli server remove https://demo.kodjin.com/fhir
+Removed server https://demo.kodjin.com/fhir
+```
 
 ### metadata
 
