@@ -322,7 +322,9 @@ async fn process_files(
 }
 
 pub async fn process_directory(ctx: InstallContext<'_>, root_path: &Path) -> anyhow::Result<()> {
-    let pkg_name = fs::canonicalize(root_path)
+    let mut root_path = root_path.to_owned();
+
+    let pkg_name = fs::canonicalize(&root_path)
         .context("Invalid path provided")?
         .file_name()
         .context("Provided path has no name")?
@@ -346,12 +348,29 @@ pub async fn process_directory(ctx: InstallContext<'_>, root_path: &Path) -> any
 
     let bar = ProgressBar::new_spinner().with_message("Loading data");
 
+    if root_path.join("package.json").exists() {
+        let full_path = fs::canonicalize(&root_path).context("Could not resolve directory")?;
+        if full_path
+            .file_name()
+            .is_some_and(|name| name.to_str() == Some("package"))
+        {
+            root_path = full_path
+                .parent()
+                .context("Could not get directory parent")?
+                .to_path_buf();
+        } else {
+            bar.suspend(|| {
+            println!("package.json file exists, but current directory is not 'package' - renaming FHIR package directories is not allowed due to file paths being used inside of the package.");
+        });
+        }
+    }
+
     if root_path.join("package").join("package.json").exists() {
         bar.suspend(|| {
             println!("Found package.json file, processing as FHIR package");
         });
 
-        let package = FhirPackage::new(root_path.to_owned());
+        let package = FhirPackage::new(root_path.clone());
 
         install_package(ctx, package, current_progress, &bar).await
     } else {
@@ -362,9 +381,9 @@ pub async fn process_directory(ctx: InstallContext<'_>, root_path: &Path) -> any
         // Grouped by resource type
         let mut resources: IndexMap<String, Vec<Resource>> = IndexMap::new();
 
-        let paths = load_file_list(root_path)?;
+        let paths = load_file_list(&root_path)?;
         for file_path in paths {
-            let relative_path = file_path.strip_prefix(root_path)?;
+            let relative_path = file_path.strip_prefix(&root_path)?;
             bar.set_message(format!("Reading file {}", relative_path.to_string_lossy()));
 
             if let Err(error) = load_file(&mut resources, &file_path, relative_path) {
