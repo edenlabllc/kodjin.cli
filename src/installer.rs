@@ -360,8 +360,8 @@ pub async fn process_directory(ctx: InstallContext<'_>, root_path: &Path) -> any
                 .to_path_buf();
         } else {
             bar.suspend(|| {
-            println!("package.json file exists, but current directory is not 'package' - renaming FHIR package directories is not allowed due to file paths being used inside of the package.");
-        });
+                println!("package.json file exists, but current directory is not 'package' - renaming FHIR package directories is not allowed due to file paths being used inside of the package.");
+            });
         }
     }
 
@@ -893,7 +893,7 @@ fn log_resource_error(
 
                     if let Some(info) = resource_info {
                         msg.id = Some(&info.id);
-                        msg.url = msg.url.or(info.url.as_deref());
+                        msg.url = info.url.as_deref().or(msg.url);
                         msg.version = info.version.as_deref();
                     }
 
