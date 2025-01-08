@@ -1,0 +1,69 @@
+site_name: Kodjin CLI Documentation
+site_description: The Kodjin CLI is a command-line tool designed to simplify the process of downloading, installing, and managing FHIR Implementation Guides (IGs) for FHIR servers.
+copyright: © EDENLAB. ALL RIGHTS RESERVED, 2021 - 2025
+theme:
+  custom_dir: docs/theme_overwrites_home
+  logo: assets/logo.svg
+  favicon: assets/favicon.svg
+  name: material
+  features:
+    - navigation.instant
+    - navigation.tracking
+    - navigation.sections
+    - navigation.indexes
+    - navigation.tabs
+    - navigation.top
+  palette:
+    primary: grey
+    accent: deep orange
+  font:
+    text: Montserrat
+nav:
+- Documentation: 
+  - About Kodjin CLI: about-kodjin-cli.md
+  - Installation: installation.md
+  - Synopsis: synoptic.md
+  - Command auto-completion: command-auto-completion.md
+  - Global options: global-options.md
+  - Commands: 
+    - server: command-server.md
+    - metadata: command-metadata.md
+    - install: command-install.md
+    - uninstall: command-uninstall.md
+    - check: command-check.md
+    - tree: command-tree.md
+    - info: command-info.md
+    - download: command-download.md
+    - generate-completions: command-generate-completions.md
+    - help: command-help.md
+  - FAQ: faq.md
+- Changelog: changelog.md
+
+extra:
+  social:
+    - icon: fontawesome/brands/linkedin
+      link: https://www.linkedin.com/company/edenlab-it/
+    - icon: fontawesome/brands/facebook
+      link: https://www.facebook.com/edenlabIT
+    - icon: fontawesome/brands/twitter
+      link: https://twitter.com/EdenlabIT
+markdown_extensions:
+  - attr_list
+  - md_in_html
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true 
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  - def_list
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences
+      
+extra_css:
+    - stylesheets/extra.css
