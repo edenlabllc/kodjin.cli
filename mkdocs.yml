@@ -48,22 +48,7 @@ extra:
     - icon: fontawesome/brands/twitter
       link: https://twitter.com/EdenlabIT
 markdown_extensions:
-  - attr_list
-  - md_in_html
-  - pymdownx.superfences
-  - pymdownx.tabbed:
-      alternate_style: true 
-  - admonition
-  - pymdownx.details
-  - pymdownx.superfences
-  - def_list
-  - pymdownx.tasklist:
-      custom_checkbox: true
-  - pymdownx.highlight:
-      anchor_linenums: true
-  - pymdownx.inlinehilite
-  - pymdownx.snippets
-  - pymdownx.superfences
+  - pymdownx.superfences # https://squidfunk.github.io/mkdocs-material/extensions/pymdown/#superfences
       
 extra_css:
     - stylesheets/extra.css

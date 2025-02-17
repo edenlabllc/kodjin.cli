@@ -6,7 +6,7 @@ In case opation uses an argument they should be separated with a space. In this 
 
 ## -s, --server <SERVER>
 
-If you want to use server that differ from defaulf you can add `--server` option. To see the default version of the server use [server list command](#list)
+If you want to use server that differ from defaulf you can add `--server` option. To see the default version of the server use [server list command](/command-server/#list)
 
 Syntax:
 ```bash
@@ -74,11 +74,12 @@ Available Options:
 - `directory` – titles of IGs and files processed are written to the console, but OperationOutcomes are saved in newline-delimited JSON (.ndjson) files within the default directory.
 
 Each system has its own default directory:
-| Platform | Value                                | Example                                         |
-| -------- | ------------------------------------ | ----------------------------------------------- |
-| Linux    | $XDS_DATA_HOME or $HOME/.local/share | /home/\<username\>/.local/share                 |
-| macOS    | $HOME/Library/Application Support    | /Users/\<username\>/Library/Application Support |
-| Windows  | {FOLDER_LocalAppData}                | C:\Users\\<username\>\AppData\Local             |
+
+| Platform | Value                                | Example                                        |
+| -------- | ------------------------------------ | ---------------------------------------------- |
+| Linux    | $XDS_DATA_HOME or $HOME/.local/share | /home/<username\>/.local/share                 |
+| macOS    | $HOME/Library/Application Support    | /Users/<username\>/Library/Application Support |
+| Windows  | {FOLDER_LocalAppData}                | C:\Users\\<username\>\AppData\Local            |
 
 -  `folder path` - instead of writing OperationOutcome .ndjson files to the default directory you can choose any directory that is 
 
@@ -91,7 +92,7 @@ Examples:
 
 As `stderr` is a default value to use this value we do not need to add an option
 
-```bash
+```shell
 $ kodjin-cli install hl7.fhir.au.base@4.2.2-ballot
 ```
 
@@ -101,13 +102,13 @@ Print help (see a summary with '-h')
 
 Example for summary:
 
-```bash
+```shell
 ➜ kodjin-cli -h
 ```
 
 Response example for summary
 
-```bash
+```shell
 Kodjin management CLI
 
 Usage: kodjin-cli [OPTIONS] <COMMAND>
@@ -143,11 +144,11 @@ Options:
 
 Example for full help information: 
 
-```bash
+```shell
 kodjin-cli --help
 ```
 Respone for for full help information: 
-```bash
+```shell
 Kodjin management CLI
 
 Usage examples:
