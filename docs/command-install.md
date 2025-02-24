@@ -15,7 +15,7 @@ kodjin-cli install hl7.fhir.us.core@4.0.0
 
 ## --type
 
-**Usage:**
+Syntax:
 ```shell
 kodjin-cli install --type directory <PATH>
 ```
