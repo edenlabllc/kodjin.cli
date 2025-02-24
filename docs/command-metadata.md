@@ -1,14 +1,14 @@
-### metadata
+# Command metadata
 
 The `metadata` command retrieves and displays some data from the capability statement (server metadata) of a configured FHIR server. This provides essential details about the server's supported FHIR version, available resources, operations, and extensions.
 
 
-Syntax:
+**Usage:**
 ```shell
 kodjin-cli metadata
 ```
 
-Example:
+**Examples:**
 
 ```shell
 ➜  $ kodjin-cli metadata

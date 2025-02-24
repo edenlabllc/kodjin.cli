@@ -14,6 +14,6 @@ TBD
 
 Once installed, you can verify the installation by running:
 
-```bash
+```shell
 kodjin-cli --version
 ``

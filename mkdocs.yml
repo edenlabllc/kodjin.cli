@@ -22,7 +22,7 @@ nav:
 - Documentation: 
   - About Kodjin CLI: about-kodjin-cli.md
   - Installation: installation.md
-  - Synopsis: synoptic.md
+  - Synopsis: synoptis.md
   - Command auto-completion: command-auto-completion.md
   - Global options: global-options.md
   - Commands: 

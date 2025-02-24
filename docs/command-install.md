@@ -1,15 +1,21 @@
-### install
+# Command install
 
 The `install` command installs a FHIR package, either from the official FHIR package registry or from a local directory. This allows users to easily retrieve and use FHIR Implementation Guides (IGs) and dependencies.
 
-Syntax:
+**Usage:**
 ```shell
-kodjin-cli install [OPTIONS] <NAME>
+kodjin-cli install <NAME|--type <TYPE>|--registry <REGISTRY>|--existing-resources <EXISTING_RESOURCES>|--skip-strict-reference-versions|--preprocess>
+```
+**Examples:**
+
+Install us-core package version 4.0.0
+```shell
+kodjin-cli install hl7.fhir.us.core@4.0.0
 ```
 
 ## --type
 
-Syntax:
+**Usage:**
 ```shell
 kodjin-cli install --type directory <PATH>
 ```
@@ -19,42 +25,103 @@ Available Options:
 - `package` - retrieves FHIR package from the official registry. For example, you can install a US Core package version 4.0.0 `hl7.fhir.us.core@4.0.0` This option is enabled by default, so it does not need to be explicitly specified when running the command.
 - `directory` - retrieves FHIR package from the specified directory. The `.` could be used to install package from the current directory.
 
-Examples:
+**Examples:**
+
+Here we will install the FHIR package from /path/to/package directory
 ```shell
 kodjin-cli install --type directory /path/to/package
 ```
-> Installs the FHIR package from /path/to/package.
 
-Examples:
+In this example we will install the package from the current directory.
 ```shell
 kodjin-cli install --type directory .
 ```
-> Installs the package from the current directory.
+
+Example with type package:
+```shell
+
+```
 
 ## --registry
-The `registry` command 
-Syntax:
-```shell
 
+Allows you to specify a custom FHIR package registry. By default, https://packages.simplifier.net is used for retrieving FHIR packages.
+
+- The specified registry must follow the [FHIR package specification](http://hl7.org/fhir/packages.html).
+- If no `--registry` option is provided, the default registry is used.
+- This option is useful for organizations that maintain private or custom FHIR package repositories.
+  
+**Usage:**
+```shell
+kodjin-cli install --registry <REGISTRY>
 ```
 
-## existing-resources
+**Examples:**
 
-Syntax:
+Install package from the default package regisrty
 ```shell
-
+kodjin-cli install hl7.fhir.us.core@4.0.0
 ```
 
-## skip-strict-reference-versions
-
-Syntax:
+Install package from custom package regisrty
 ```shell
-
+kodjin-cli install hl7.fhir.us.core@4.0.0 --registry https://custom.fhir.registry.com
 ```
 
-## preprocess
+## --existing-resources
 
-Syntax:
+Defines how kodjin-cli should handle resources that already exist on the FHIR server when installing a package. This option is particularly useful for subsequent package installations.
+
+**Usage:**
+```shell
+kodjin-cli install <NAME> --existing-resources <skip|overwrite>
+```
+
+ Possible values:
+- `skip` - When using skip, kodjin-cli will skip resources that are already installed on the server. Is a dedault value.
+- `overwrite` - When using overwrite kodjin-cli will update resources, if they are already exist on the server
+
+**Examples:**
+
+Install a package and overwrite existing resources
+```shell
+$ kodjin-cli install hl7.fhir.us.core@4.0.0 --existing-resources overwrite
+```
+
+Notes
+
+- `skip` is default value, so it does not need to be explicitly specified when running the command.
+- The `overwrite` option should be used cautiously, especially in production environments, as it will replace existing resources.
+- To check what resources are already installed, use `kodgin-cli install us.core --preprocess`.
+
+
+## --skip-strict-reference-versions
+
+Disables the enforcement of version-specific references when installing FHIR packages. This option should be used with caution, as references in FHIR resources often include versions to ensure compatibility and consistency.
+
+**Usage:**
+```shell
+kodjin-cli install --skip-strict-reference-versions <NAME>
+```
+
+When installing packages, kodjin-cli performs several updates to conformance resources, including:
+
+- Generating new resource IDs for canonical resources (those with a url and version).
+- Generating missing snapshots for StructureDefinition resources.
+- Making references in StructureDefinition resources version-specific within the package.
+
+By using --skip-strict-reference-versions, the Kodjin CLI does not enforce version-specific references, potentially allowing references to resolve more flexibly.
+
+**Examples:**
+```shell
+$ kodjin-cli install --skip-strict-reference-versions ihe.formatcode.fhir@1.1.0
+```
+
+Notes
+
+- Use this option carefully, as improper reference handling may cause validation or compatibility issues.
+- For more details on FHIR references and canonical URLs, refer to the FHIR documentation.
+
+**Usage:**
 ```shell
 
 ```
@@ -63,12 +130,12 @@ Syntax:
 
 The `help` command returns help of the given subcommand(s)
 
-Syntax:
+**Usage:**
 ```shell
 kodjin-cli install [OPTIONS] <NAME>
 ```
 
-Examples:
+**Examples:**
 
 ```shell
 $ kodjin-cli install --help
@@ -108,11 +175,6 @@ Options:
 
       --skip-strict-reference-versions
           Do not change profile references to be version-specific, keep them as-is instead
-
-      --preprocess
-          Perform resource preprocessing that is normally done before installation
-
-          Currently does the following: - Generates new resource ids for canonical resources (ones that have a url and version present) - Generates snapshots for StructureDefinition resources where they are missing - Makes references to other profiles within the current package in StructureDefinition resources version-specific
 
   -h, --help
           Print help (see a summary with '-h')

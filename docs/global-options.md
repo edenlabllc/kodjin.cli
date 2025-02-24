@@ -8,15 +8,15 @@ In case opation uses an argument they should be separated with a space. In this 
 
 If you want to use server that differ from defaulf you can add `--server` option. To see the default version of the server use [server list command](/command-server/#list)
 
-Syntax:
-```bash
-$ kodjin-cli --server <server>
+**Usage:**
+```shell
+kodjin-cli --server <server>
 ```
 
-Example:
+**Example:**
 
 In this example we will check what is the default sever is and then use for installing IG to the one that is not default
-```bash
+```shell
 $ kodjin-cli server list
 
 List of currently configured servers:
@@ -26,7 +26,7 @@ List of currently configured servers:
 $ kodjin-cli --server https://develop.com/fhir install hl7.fhir.us.core@4.0.0
 ```
 
-If you want to instal IG to your default server https://production.com/fhir`, then you do not need to use this flag
+If you want to instal IG to your default server, then you do not need to use this flag
 
 
 ## --insecure-certificates
@@ -35,15 +35,15 @@ Skips TLS (Transport Layer Security) certificate validation, allowing connection
 
 > Note: This option should be used with caution and only in trusted development or testing environments, as it bypasses a key security measure.
 
-Syntax:
-```bash
-$ kodjin-cli --insecure-certificates
+**Usage:**
+```shell
+kodjin-cli --insecure-certificates
 ```
 
-Example:
+**Example:**
 
 In this example, we will install the specified Implementation Guide without verifying the server's TLS certificate.
-```bash
+```shell
 $ kodjin-cli --insecure-certificates install hl7.fhir.us.core@4.0.0
 ```
 
@@ -51,15 +51,15 @@ $ kodjin-cli --insecure-certificates install hl7.fhir.us.core@4.0.0
 
 Limit the waiting time of the response to REQUEST_TIMEOUT (in seconds). The default value is 30 sec. If you want to wait more or less you can change this value by adding `--request-timeout` to the request.
 
-Syntax:
-```bash
-$ kodjin-cli --request-timeout <number>
+**Usage:**
+```shell
+kodjin-cli --request-timeout <number>
 ```
 
-Example:
+**Example:**
 
 In this example, we will increase waiting time for the response
-```bash
+```shell
 $ kodjin-cli --request-timeout 40 install hl7.fhir.us.core@4.0.0
 ```
 
@@ -81,14 +81,14 @@ Each system has its own default directory:
 | macOS    | $HOME/Library/Application Support    | /Users/<username\>/Library/Application Support |
 | Windows  | {FOLDER_LocalAppData}                | C:\Users\\<username\>\AppData\Local            |
 
--  `folder path` - instead of writing OperationOutcome .ndjson files to the default directory you can choose any directory that is 
+-  `folder path` - instead of writing OperationOutcome .ndjson files to the default directory you can choose any directory
 
-Syntax:
-```bash
-$ kodjin-cli --errors-output=<stderr|directory|folder path> <command>
+**Usage:**
+```shell
+kodjin-cli --errors-output=<stderr|directory|folder path> <command>
 ```
 
-Examples:
+**Examples:**
 
 As `stderr` is a default value to use this value we do not need to add an option
 
@@ -96,49 +96,79 @@ As `stderr` is a default value to use this value we do not need to add an option
 $ kodjin-cli install hl7.fhir.au.base@4.2.2-ballot
 ```
 
+The next example is to write outcome files to the directory
+```shell
+kodjin-cli --errors-output=directory install hl7.fhir.au.base@4.2.2-ballot
+```
+
+Current example is how to write outcome files to the local directory. We will write them to the currect directory
+```shell
+kodjin-cli --errors-output=. install hl7.fhir.au.base@4.2.2-ballot
+```
+
 ## -h, --help
 
-Print help (see a summary with '-h')
+Displays help information for kodjin-cli, including available commands, options, and usage examples.
+
+- This option can be used with any command to get more details on its usage.
+- Running kodjin-cli without arguments may also display the help menu.
+- The [`kodjin-cli help` command](./command-help.md) also return the help information.
+
+Help options:
+
+- `-h` - returns summary information
+- `--help` - returns full help information
+
+
+**Usage:**
+```shell
+kodjin-cli --help
+```
+or
+```shell
+kodjin-cli <command> --help
+```
+
+<b>Examples:</b>
 
 Example for summary:
-
 ```shell
-➜ kodjin-cli -h
+kodjin-cli -h
 ```
+<details>
+<summary>Response example for summary</summary>
 
-Response example for summary
+  ```shell
+  Kodjin management CLI
 
-```shell
-Kodjin management CLI
+  Usage: kodjin-cli [OPTIONS] <COMMAND>
 
-Usage: kodjin-cli [OPTIONS] <COMMAND>
+  Commands:
+    server                Manage FHIR server URLs
+    metadata              Show FHIR server metadata
+    install               Install a FHIR package
+    uninstall             Uninstall a FHIR package
+    check                 Check if a FHIR package is installed
+    tree                  Print dependency tree of a FHIR package
+    info                  Show information about a FHIR package
+    download              Download a package locally
+    generate-completions  Generate command autocompletions
+    help                  Print this message or the help of the given subcommand(s)
 
-Commands:
-  server                Manage FHIR server URLs
-  metadata              Show FHIR server metadata
-  install               Install a FHIR package
-  uninstall             Uninstall a FHIR package
-  check                 Check if a FHIR package is installed
-  tree                  Print dependency tree of a FHIR package
-  info                  Show information about a FHIR package
-  download              Download a package locally
-  generate-completions  Generate command autocompletions
-  help                  Print this message or the help of the given subcommand(s)
-
-Options:
-  -s, --server <SERVER>
-          Select which FHIR server to use. The default one will be used if not specified
-      --insecure-certificates
-          Skip TLS certificate validation
-      --request-timeout <REQUEST_TIMEOUT>
-          Timeout for requests (in seconds) [default: 30]
-      --errors-output <ERRORS_OUTPUT>
-          Where errors should be written to [default: stderr] [possible values: stderr, directory]
-  -h, --help
-          Print help (see more with '--help')
-  -V, --version
-          Print version
-```
+  Options:
+    -s, --server <SERVER>
+            Select which FHIR server to use. The default one will be used if not specified
+        --insecure-certificates
+            Skip TLS certificate validation
+        --request-timeout <REQUEST_TIMEOUT>
+            Timeout for requests (in seconds) [default: 30]
+        --errors-output <ERRORS_OUTPUT>
+            Where errors should be written to [default: stderr] [possible values: stderr, directory]
+    -h, --help
+            Print help (see more with '--help')
+    -V, --version
+            Print version
+  ```
 
 </details>
 
@@ -147,66 +177,73 @@ Example for full help information:
 ```shell
 kodjin-cli --help
 ```
-Respone for for full help information: 
-```shell
-Kodjin management CLI
+<details>
+<summary>Respone for for full help information: </summary>
+  ```shell
+  Kodjin management CLI
 
-Usage examples:
-$ kodjin-cli server add https://demo.kodjin.com/fhir
-$ kodjin-cli metadata
-$ kodjin-cli info de.gematik.epa
-$ kodjin-cli install hl7.fhir.us.core@4.0.0
-$ kodjin-cli --errors-output=directory install hl7.fhir.us.core@4.0.0
-$ kodjin-cli --server=kodjin-demo check hl7.fhir.us.core@4.0.0
+  Usage examples:
+  $ kodjin-cli server add https://demo.kodjin.com/fhir
+  $ kodjin-cli metadata
+  $ kodjin-cli info de.gematik.epa
+  $ kodjin-cli install hl7.fhir.us.core@4.0.0
+  $ kodjin-cli --errors-output=directory install hl7.fhir.us.core@4.0.0
+  $ kodjin-cli --server=kodjin-demo check hl7.fhir.us.core@4.0.0
 
-For full information, see --help for each subcommand.
+  For full information, see --help for each subcommand.
 
-Usage: kodjin-cli [OPTIONS] <COMMAND>
+  Usage: kodjin-cli [OPTIONS] <COMMAND>
 
-Commands:
-  server                Manage FHIR server URLs
-  metadata              Show FHIR server metadata
-  install               Install a FHIR package
-  uninstall             Uninstall a FHIR package
-  check                 Check if a FHIR package is installed
-  tree                  Print dependency tree of a FHIR package
-  info                  Show information about a FHIR package
-  download              Download a package locally
-  generate-completions  Generate command autocompletions
-  help                  Print this message or the help of the given subcommand(s)
+  Commands:
+    server                Manage FHIR server URLs
+    metadata              Show FHIR server metadata
+    install               Install a FHIR package
+    uninstall             Uninstall a FHIR package
+    check                 Check if a FHIR package is installed
+    tree                  Print dependency tree of a FHIR package
+    info                  Show information about a FHIR package
+    download              Download a package locally
+    generate-completions  Generate command autocompletions
+    help                  Print this message or the help of the given subcommand(s)
 
-Options:
-  -s, --server <SERVER>
-          Select which FHIR server to use. The default one will be used if not specified
+  Options:
+    -s, --server <SERVER>
+            Select which FHIR server to use. The default one will be used if not specified
 
-      --insecure-certificates
-          Skip TLS certificate validation
+        --insecure-certificates
+            Skip TLS certificate validation
 
-      --request-timeout <REQUEST_TIMEOUT>
-          Timeout for requests (in seconds)
+        --request-timeout <REQUEST_TIMEOUT>
+            Timeout for requests (in seconds)
 
-          [default: 30]
+            [default: 30]
 
-      --errors-output <ERRORS_OUTPUT>
-          Where errors should be written to
+        --errors-output <ERRORS_OUTPUT>
+            Where errors should be written to
 
-          [default: stderr]
-          [possible values: stderr, directory]
+            [default: stderr]
+            [possible values: stderr, directory]
 
-  -h, --help
-          Print help (see a summary with '-h')
+    -h, --help
+            Print help (see a summary with '-h')
 
-  -V, --version
-          Print version
-```
+    -V, --version
+            Print version
+  ```
+</details>
 
 ## -V, --version
 
-Print version
+Dislays the current version of the kodjin-cli, that is installed locally
 
-Examples:
+**Usage: **
+```shell
+kodjin-cli --version
+```
 
-```bash
+**Examples:**
+
+```shell
 $ kodjin-cli --version
 kodjin-cli 0.1.0
 ```

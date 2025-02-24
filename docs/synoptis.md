@@ -2,15 +2,16 @@
 
 The Kodjin-cli follows a simple syntax pattern:
 
-```bash
+```shell
 kodjin-cli [OPTIONS] <COMMAND> [OPTIONS]
 ```
 Where
+
 - `<COMMAND>`: Specifies the operation that you want to perform
 - `[OPTIONS]`: Specifies configuration for the operation. Kodjin-cli has options for kodjin-cli and options for each operation of kodjin-cli.
 
 Here’s a breakdown of the primary commands:
-```bash
+```shell
 $ kodjin-cli --version
 $ kodjin-cli server add https://demo.kodjin.com/fhir
 $ kodjin-cli metadata
