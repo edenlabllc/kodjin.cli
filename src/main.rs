@@ -50,9 +50,12 @@ async fn run(args: Args) -> anyhow::Result<()> {
         }
         CliCommand::Tree(cmd) => subcommands::tree(cmd).await,
         CliCommand::Info(cmd) => subcommands::info(cmd).await,
-        CliCommand::Download(cmd) => {
+        CliCommand::Download {
+            preprocess,
+            package_args,
+        } => {
             let client = get_client(&config, &args)?;
-            subcommands::download(cmd, client).await
+            subcommands::download(package_args, client, preprocess).await
         }
         CliCommand::GenerateCompletions(completions) => {
             clap_complete::generate(

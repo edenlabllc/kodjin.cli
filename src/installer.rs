@@ -687,6 +687,7 @@ pub async fn download(
     package: &str,
     fhir_client: FhirClient,
     skip_strict_reference_versions: bool,
+    preprocess: bool,
 ) -> anyhow::Result<()> {
     let package_req = PackageReq::from_str(package)?;
 
@@ -735,33 +736,35 @@ pub async fn download(
             source_path: file.get_path(),
         };
 
-        let changed = processor::preprocess_resource(
-            &mut resource,
-            &fhir_client,
-            skip_strict_reference_versions,
-            &file.resource_info.resource_type,
-            &index,
-            &bar,
-        )
-        .await
-        .with_context(|| {
-            format!(
-                "Could not preprocess resource {}",
-                file.get_path().display()
+        if preprocess {
+            let changed = processor::preprocess_resource(
+                &mut resource,
+                &fhir_client,
+                skip_strict_reference_versions,
+                &file.resource_info.resource_type,
+                &index,
+                &bar,
             )
-        })?;
+            .await
+            .with_context(|| {
+                format!(
+                    "Could not preprocess resource {}",
+                    file.get_path().display()
+                )
+            })?;
 
-        if changed {
-            let new_file_contents = serde_json::to_string_pretty(&resource.data)?;
-            fs::write(&file_path, new_file_contents)
-                .with_context(|| format!("Could not write to {}", file_path.display()))?;
+            if changed {
+                let new_file_contents = serde_json::to_string_pretty(&resource.data)?;
+                fs::write(&file_path, new_file_contents)
+                    .with_context(|| format!("Could not write to {}", file_path.display()))?;
 
-            bar.suspend(|| {
-                println!(
-                    "Preprocessed file {}",
-                    style(file.get_path().display()).bold()
-                );
-            })
+                bar.suspend(|| {
+                    println!(
+                        "Preprocessed file {}",
+                        style(file.get_path().display()).bold()
+                    );
+                })
+            }
         }
     }
 
