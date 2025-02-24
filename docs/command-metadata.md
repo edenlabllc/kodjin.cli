@@ -11,7 +11,7 @@ kodjin-cli metadata
 **Examples:**
 
 ```shell
-➜  $ kodjin-cli metadata
+$ kodjin-cli metadata
 
 Name: Kodjin FHIR server 4.0.1 CapabilityStatement
 Publisher: EdenLab

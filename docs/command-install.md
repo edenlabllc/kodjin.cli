@@ -4,7 +4,7 @@ The `install` command installs a FHIR package, either from the official FHIR pac
 
 **Usage:**
 ```shell
-kodjin-cli install <NAME|--type <TYPE>|--registry <REGISTRY>|--existing-resources <EXISTING_RESOURCES>|--skip-strict-reference-versions|--preprocess>
+kodjin-cli install [OPTIONS] <NAME>
 ```
 **Examples:**
 
@@ -13,19 +13,32 @@ Install us-core package version 4.0.0
 kodjin-cli install hl7.fhir.us.core@4.0.0
 ```
 
+Options:
+
 ## --type
 
-Syntax:
+The --type option specifies the source type of the FHIR package when using the install command. It allows users to install packages either from the official FHIR package registry or from a local directory.
+
+**Usage**:
 ```shell
-kodjin-cli install --type directory <PATH>
+kodjin-cli install --type <package|directory> <PATH>
 ```
 
 Available Options:
 
-- `package` - retrieves FHIR package from the official registry. For example, you can install a US Core package version 4.0.0 `hl7.fhir.us.core@4.0.0` This option is enabled by default, so it does not need to be explicitly specified when running the command.
-- `directory` - retrieves FHIR package from the specified directory. The `.` could be used to install package from the current directory.
+- `package` (default) - retrieves FHIR package from the official registry. 
+    - For example, you can install a US Core package version 4.0.0 `hl7.fhir.us.core@4.0.0`  
+    - This is the default behavior, so it does not need to be explicitly specified.  
+- `directory` - retrieves FHIR package from the specified directory. 
+    - The `.` could be used to install package from the current directory.
+
 
 **Examples:**
+
+Install package from the FHIR registry
+```shell
+kodjin-cli install hl7.fhir.us.core
+```
 
 Here we will install the FHIR package from /path/to/package directory
 ```shell
@@ -37,19 +50,16 @@ In this example we will install the package from the current directory.
 kodjin-cli install --type directory .
 ```
 
-Example with type package:
-```shell
+Notes
 
-```
+- If no `--type` option is provided, `package` is used by default.
+- Installing from a directory is useful when working with modified or custom packages.
+- Ensure that the directory contains a valid FHIR package structure.
 
 ## --registry
 
 Allows you to specify a custom FHIR package registry. By default, https://packages.simplifier.net is used for retrieving FHIR packages.
 
-- The specified registry must follow the [FHIR package specification](http://hl7.org/fhir/packages.html).
-- If no `--registry` option is provided, the default registry is used.
-- This option is useful for organizations that maintain private or custom FHIR package repositories.
-  
 **Usage:**
 ```shell
 kodjin-cli install --registry <REGISTRY>
@@ -67,6 +77,12 @@ Install package from custom package regisrty
 kodjin-cli install hl7.fhir.us.core@4.0.0 --registry https://custom.fhir.registry.com
 ```
 
+Notes
+
+- The specified registry must follow the [FHIR package specification](http://hl7.org/fhir/packages.html).
+- If no `--registry` option is provided, the default registry is used.
+- This option is useful for organizations that maintain private or custom FHIR package repositories.
+  
 ## --existing-resources
 
 Defines how kodjin-cli should handle resources that already exist on the FHIR server when installing a package. This option is particularly useful for subsequent package installations.
@@ -76,7 +92,7 @@ Defines how kodjin-cli should handle resources that already exist on the FHIR se
 kodjin-cli install <NAME> --existing-resources <skip|overwrite>
 ```
 
- Possible values:
+Possible values:
 - `skip` - When using skip, kodjin-cli will skip resources that are already installed on the server. Is a dedault value.
 - `overwrite` - When using overwrite kodjin-cli will update resources, if they are already exist on the server
 
@@ -121,18 +137,14 @@ Notes
 - Use this option carefully, as improper reference handling may cause validation or compatibility issues.
 - For more details on FHIR references and canonical URLs, refer to the FHIR documentation.
 
-**Usage:**
-```shell
 
-```
-
-## help
+## --help
 
 The `help` command returns help of the given subcommand(s)
 
 **Usage:**
 ```shell
-kodjin-cli install [OPTIONS] <NAME>
+kodjin-cli install --help
 ```
 
 **Examples:**

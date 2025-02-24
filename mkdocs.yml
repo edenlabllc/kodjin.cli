@@ -49,6 +49,7 @@ extra:
       link: https://twitter.com/EdenlabIT
 markdown_extensions:
   - pymdownx.superfences # https://squidfunk.github.io/mkdocs-material/extensions/pymdown/#superfences
-      
+  - admonition
+
 extra_css:
     - stylesheets/extra.css

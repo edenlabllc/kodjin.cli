@@ -2,7 +2,7 @@
 
 The `download` command retrieves a FHIR package from the registry and saves it locally. This allows you to inspect and modify conformance resources before installing them on a FHIR server.
 
-Note! "`download` command always save files in the current directory"
+!!! note "`download` command always save files in the current directory"
 
 **Usage**
 ```shell

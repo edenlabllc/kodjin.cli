@@ -14,10 +14,7 @@ Display the dependency tree for a package
 
 ```shell
 $ kodjin-cli tree hl7.fhir.us.core@4.0.0
-```
 
-Example Output
-```shell
  - hl7.fhir.us.core@4.0.0 (148 resources)
    - hl7.fhir.uv.bulkdata@1.0.1 (6 resources)
      - hl7.fhir.r4.core@4.0.1 (4581 resources)

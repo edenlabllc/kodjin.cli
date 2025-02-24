@@ -7,7 +7,7 @@ The `uninstall` command removes conformance resources associated with a FHIR pac
 kodjin-cli uninstall [OPTIONS] <NAME>
 ```
 
-Examples
+**Examples:**
 
 Uninstall a package from the default FHIR server
 ```shell
