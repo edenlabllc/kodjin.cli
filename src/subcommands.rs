@@ -54,10 +54,7 @@ pub async fn server(cmd: ServerCommand, mut config: Config, args: &Args) -> anyh
             let metadata = client.get_metadata().await?;
 
             config.servers.insert(name.clone(), ServerConfig { url });
-
-            if config.servers.len() == 1 {
-                config.current_server = Some(config.servers.keys().next().unwrap().clone());
-            }
+            config.current_server = Some(name.clone());
 
             config.save()?;
 
