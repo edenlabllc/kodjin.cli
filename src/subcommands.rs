@@ -20,7 +20,22 @@ pub async fn server(cmd: ServerCommand, mut config: Config, args: &Args) -> anyh
                 style("List of currently configured servers:").underlined()
             );
 
-            for (server_name, server_config) in &config.servers {
+            let mut servers = config
+                .servers
+                .iter()
+                .filter(|(name, _)| config.current_server.as_ref() != Some(name))
+                .map(|(name, server)| (name, server, false))
+                .collect::<Vec<_>>();
+
+            servers.sort_by_key(|(_, server, default)| (&server.url, *default));
+
+            if let Some(default) = &config.current_server {
+                if let Some(server) = config.servers.get(default) {
+                    servers.insert(0, (default, server, true));
+                }
+            }
+
+            for (server_name, server_config, is_default) in servers {
                 print!("- ");
                 if *server_name == server_config.url {
                     print!("{}", style(server_name).bold());
@@ -28,7 +43,7 @@ pub async fn server(cmd: ServerCommand, mut config: Config, args: &Args) -> anyh
                     print!("{} ({})", style(server_name).bold(), server_config.url);
                 }
 
-                if config.current_server.as_ref() == Some(server_name) {
+                if is_default {
                     print!(" {}", style("(default)").bold());
                 }
                 println!();
