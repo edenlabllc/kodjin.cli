@@ -10,6 +10,7 @@ use reqwest::Url;
 use std::{
     fs::{self, File},
     io::{self, BufReader, BufWriter, Write},
+    path::PathBuf,
     time::Duration,
 };
 
@@ -19,12 +20,11 @@ pub async fn download_package(
     version_info: NpmPackageVersionInfo,
     bar: ProgressBar,
 ) -> anyhow::Result<FhirPackage> {
-    bar.enable_steady_tick(Duration::from_millis(100));
-
     let registry_dir = match Url::parse(&registry_client.base_url) {
         Ok(url) => url.host_str().context("Invalid registry url")?.to_owned(),
         Err(_) => registry_client.base_url.to_string(),
     };
+
     let final_output_dir = storage::packages_dir()?
         .join(&registry_dir)
         .join(&name)
@@ -34,6 +34,32 @@ pub async fn download_package(
     if final_output_dir.exists() {
         return Ok(FhirPackage::new(final_output_dir));
     }
+
+    let temp_output_dir = storage::packages_dir()?
+        .join(&registry_dir)
+        .join(&name)
+        .join(format!(".{}-temp", version_info.version));
+
+    download_package_to(
+        registry_client,
+        name,
+        version_info,
+        bar,
+        final_output_dir,
+        temp_output_dir,
+    )
+    .await
+}
+
+pub async fn download_package_to(
+    registry_client: &RegistryClient,
+    name: String,
+    version_info: NpmPackageVersionInfo,
+    bar: ProgressBar,
+    final_output_dir: PathBuf,
+    temp_output_dir: PathBuf,
+) -> anyhow::Result<FhirPackage> {
+    bar.enable_steady_tick(Duration::from_millis(100));
 
     let tarball_url = &version_info.dist.tarball;
 
@@ -82,10 +108,6 @@ pub async fn download_package(
     bar.set_message(format!("Extrating {styled_package_name}"));
 
     tokio::task::spawn_blocking(move || {
-        let temp_output_dir = storage::packages_dir()?
-            .join(&registry_dir)
-            .join(name)
-            .join(format!(".{}-temp", version_info.version));
         fs::create_dir_all(&temp_output_dir)?;
 
         let reader = gzip::Decoder::new(BufReader::new(File::open(&archive_file_path)?))?;

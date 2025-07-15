@@ -13,11 +13,10 @@ use crate::{
     print_values_table,
     registry::RegistryClient,
 };
-use anyhow::Context;
+use anyhow::{bail, Context};
 use console::{strip_ansi_codes, style};
 use deno_npm::registry::{NpmPackageInfo, NpmPackageVersionInfo};
 use deno_semver::package::PackageReq;
-use fs_extra::dir::CopyOptions;
 use futures::future::{try_join_all, BoxFuture};
 use indexmap::IndexMap;
 use indicatif::{HumanDuration, MultiProgress, ProgressBar, ProgressStyle};
@@ -702,30 +701,38 @@ pub async fn download(
 
     let (_package_info, version_info) = resolve_version_info(&package_req, registry_client).await?;
 
-    let fhir_package = downloader::download_package(
+    let output_folder = format!("{}@{}", package_req.name, version_info.version);
+    fs::create_dir_all(&output_folder)?;
+    let full_final_path =
+        fs::canonicalize(&output_folder).context("Could not get output directory")?;
+
+    if fs::read_dir(&full_final_path)
+        .is_ok_and(|mut dir| dir.next().is_some_and(|result| result.is_ok()))
+    {
+        bail!("Target directory already exists and is not empty");
+    }
+
+    let temp_output_path = full_final_path
+        .parent()
+        .context("Could not get parent directory")?
+        .join(format!(".TEMP-{output_folder}"));
+
+    let fhir_package = downloader::download_package_to(
         registry_client,
         package_req.name.clone(),
         version_info.clone(),
         bar.clone(),
+        full_final_path,
+        temp_output_path,
     )
     .await?;
 
     bar.set_message("Copying files");
 
-    let output_folder = format!("{}@{}", package_req.name, version_info.version);
-    fs::create_dir_all(&output_folder)?;
-    fs_extra::dir::copy(
-        fhir_package.dir,
-        &output_folder,
-        &CopyOptions::default().content_only(true),
-    )
-    .context("Could not copy files")?;
-
-    let downloaded_fhir_package = FhirPackage::new(PathBuf::from(&output_folder));
-    let index = downloaded_fhir_package.read_index()?;
+    let index = fhir_package.read_index()?;
 
     for file in &index.files {
-        let file_path = downloaded_fhir_package.dir.join(file.get_path());
+        let file_path = fhir_package.dir.join(file.get_path());
         let file_contents =
             fs::read_to_string(&file_path).context("Failed to read file in package")?;
         let resource_data: Value =
@@ -769,7 +776,10 @@ pub async fn download(
     }
 
     bar.finish_and_clear();
-    println!("Package downloaded to {}", style(output_folder).bold());
+    println!(
+        "Package downloaded to {}",
+        style(fhir_package.dir.display()).bold()
+    );
 
     Ok(())
 }
