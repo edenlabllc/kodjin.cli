@@ -10,6 +10,7 @@ const BASE_PACKAGE: &str = "hl7.fhir.r4.core";
 use crate::{
     args::{ExistingResourceBehaviour, LogsOutput},
     client::{operation_outcome::OperationOutcome, FhirClient, FhirError},
+    installer::processor::{find_installed_resource, CONCURRENT_SEARCH_REQUESTS},
     print_values_table,
     registry::RegistryClient,
 };
@@ -17,7 +18,10 @@ use anyhow::{bail, Context};
 use console::{strip_ansi_codes, style};
 use deno_npm::registry::{NpmPackageInfo, NpmPackageVersionInfo};
 use deno_semver::package::PackageReq;
-use futures::future::{try_join_all, BoxFuture};
+use futures::{
+    future::{try_join_all, BoxFuture},
+    stream, StreamExt, TryStreamExt,
+};
 use indexmap::IndexMap;
 use indicatif::{HumanDuration, MultiProgress, ProgressBar, ProgressStyle};
 use package::{FhirPackage, PackageIndex, PackageIndexFile, PackageManifest};
@@ -134,7 +138,10 @@ pub fn install_package_by_name(
         )
         .await?;
 
-        install_package(ctx, package, install_progress, &bar).await
+        match ctx.action {
+            Action::Install => install_package(ctx, package, install_progress, &bar).await,
+            Action::Uninstall => uninstall_package(ctx, package, install_progress, &bar).await,
+        }
     })
 }
 
@@ -217,6 +224,99 @@ fn install_package<'a>(
 
         Ok(())
     })
+}
+
+async fn uninstall_package<'a>(
+    ctx: InstallContext<'a>,
+    package: FhirPackage,
+    current_progress: Arc<Mutex<InstallProgress>>,
+    bar: &'a ProgressBar,
+) -> anyhow::Result<()> {
+    let manifest = package.read_manifest()?;
+    let package_req = format!("{}@{}", manifest.name, manifest.version);
+
+    bar.set_style(
+        ProgressStyle::with_template(&format!(
+            "{{spinner}} {}: {{wide_msg}} [{{pos}}/{{len}}]",
+            style(&package_req).bold()
+        ))
+        .unwrap(),
+    );
+
+    let index = package.read_index()?;
+
+    bar.reset();
+    bar.set_length(index.files.len() as u64);
+    bar.set_message("Checking resources");
+
+    let requests = index.files.into_iter().map(|file| async move {
+        let id = find_installed_resource(ctx.fhir_client, &file.resource_info).await?;
+
+        bar.inc(1);
+
+        anyhow::Ok((file, id))
+    });
+
+    let existing = stream::iter(requests)
+        .buffer_unordered(CONCURRENT_SEARCH_REQUESTS)
+        .filter_map(|result| async {
+            match result {
+                Ok((info, Some(id))) => Some(Ok((info, id))),
+                Ok((_, None)) => None,
+                Err(err) => Some(Err(err)),
+            }
+        })
+        .try_collect::<Vec<_>>()
+        .await?;
+
+    bar.reset();
+
+    println!("Found {} resources to remove", style(existing.len()).bold());
+
+    for (file, id) in existing {
+        bar.set_message(format!(
+            "{} {} {id}",
+            ctx.action.bar_prefix(),
+            file.resource_info.resource_type,
+        ));
+
+        match ctx
+            .fhir_client
+            .delete(&file.resource_info.resource_type, &id)
+            .await
+        {
+            Ok(()) => {
+                current_progress.lock().unwrap().report.created += 1;
+            }
+            Err(error) => {
+                let file_path = file.get_path();
+                let full_name = format!("{}@{}", manifest.name, manifest.version);
+
+                log_resource_error(
+                    ctx,
+                    error,
+                    &file_path,
+                    &full_name,
+                    bar,
+                    Some(&file.resource_info),
+                );
+
+                let path: PathBuf = file_path.components().skip(1).collect();
+
+                current_progress
+                    .lock()
+                    .unwrap()
+                    .errors
+                    .push(ResourceError { path });
+                current_progress.lock().unwrap().report.errors += 1;
+            }
+        }
+        bar.inc(1);
+    }
+
+    current_progress.lock().unwrap().state = InstallState::Completed;
+
+    Ok(())
 }
 
 async fn resolve_version_info(
@@ -465,7 +565,7 @@ fn load_file_list(path: &Path) -> anyhow::Result<Vec<PathBuf>> {
 }
 
 pub async fn check_package_installed(
-    ctx: InstallContext<'_>,
+    fhir_client: &FhirClient,
     registry_client: &RegistryClient,
     package: &str,
 ) -> anyhow::Result<()> {
@@ -498,7 +598,7 @@ pub async fn check_package_installed(
             .progress_chars("#>-"),
     );
 
-    let status = processor::check_package_installed(&fhir_package, ctx.fhir_client, &bar).await?;
+    let status = processor::check_package_installed(&fhir_package, fhir_client, &bar).await?;
     progress.clear()?;
 
     match status {
@@ -795,7 +895,7 @@ pub fn print_report(ctx: InstallContext<'_>, primary_package: &str) {
             "{}: {} ({})",
             style(primary_package).bold(),
             status.state,
-            status.report
+            status.report.to_string(ctx.action)
         );
 
         if !status.errors.is_empty() {
@@ -824,7 +924,7 @@ pub fn print_report(ctx: InstallContext<'_>, primary_package: &str) {
                 "- {}: {} ({})",
                 style(name).bold(),
                 status.state,
-                status.report
+                status.report.to_string(ctx.action)
             );
 
             total_errors += status.errors.len();

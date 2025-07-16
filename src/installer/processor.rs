@@ -13,7 +13,7 @@ use serde_json::Value;
 use std::time::Duration;
 use uuid::Uuid;
 
-const CONCURRENT_SEARCH_REQUESTS: usize = 20;
+pub const CONCURRENT_SEARCH_REQUESTS: usize = 20;
 const RESOURCE_TYPES_ORDER: &[&str] = &[
     "StructureDefinition",
     "SearchParameter",
@@ -70,14 +70,15 @@ async fn process_resources_type(
 
         match ctx.action {
             Action::Install => {
-                let exists = check_resource_installed(ctx.fhir_client, &resource.info)
+                let exists = find_installed_resource(ctx.fhir_client, &resource.info)
                     .await
                     .unwrap_or_else(|err| {
                         bar.suspend(|| {
-                            println!("Could not check if resource exists: {err:#}");
-                            false
+                            eprintln!("Could not check if resource exists: {err:#}");
+                            None
                         })
-                    });
+                    })
+                    .is_some();
 
                 if !exists {
                     let source_path = resource.source_path.clone();
@@ -301,7 +302,7 @@ pub async fn check_package_installed(
     total_progress.set_message("Checking resources");
 
     let requests = index.files.into_iter().map(|file| async {
-        let exists = check_resource_installed(client, &file.resource_info).await?;
+        let exists = find_installed_resource(client, &file.resource_info).await?;
 
         total_progress.inc(1);
 
@@ -310,9 +311,9 @@ pub async fn check_package_installed(
 
     let missing = stream::iter(requests)
         .buffer_unordered(CONCURRENT_SEARCH_REQUESTS)
-        .try_filter(|(_, exists)| {
-            let exists = *exists;
-            async move { !exists }
+        .try_filter(|(_, id)| {
+            let missing = id.is_none();
+            async move { missing }
         })
         .map_ok(|(file, _)| file)
         .try_collect::<Vec<_>>()
@@ -332,10 +333,11 @@ pub enum PackageInstallStatus {
     NotInstalled(Vec<PackageIndexFile>),
 }
 
-async fn check_resource_installed(
+/// Returns the ids of existing resources
+pub(super) async fn find_installed_resource(
     client: &FhirClient,
     resource_info: &ResourceInfo,
-) -> anyhow::Result<bool> {
+) -> anyhow::Result<Option<String>> {
     let mut search_params: Vec<(&str, &str)> = vec![];
     if let Some(url) = &resource_info.url {
         search_params.push(("url", url));
@@ -352,16 +354,19 @@ async fn check_resource_installed(
         .await
         .context("Could not search currently installed resources")?;
 
-    let exists = bundle.entry.iter().any(|entry| {
-        entry.resource.as_ref().is_some_and(|resource| {
-            (resource.url.is_some()
-                && resource.url == resource_info.url
-                && resource.version == resource_info.version)
-                || (resource_info.url.is_none() && resource.id == resource_info.id)
-        })
+    let id = bundle.entry.into_iter().find_map(|entry| {
+        entry
+            .resource
+            .filter(|resource| {
+                (resource.url.is_some()
+                    && resource.url == resource_info.url
+                    && resource.version == resource_info.version)
+                    || (resource_info.url.is_none() && resource.id == resource_info.id)
+            })
+            .map(|resource| resource.id)
     });
 
-    Ok(exists)
+    Ok(id)
 }
 
 #[cfg(test)]

@@ -46,7 +46,7 @@ async fn run(args: Args) -> anyhow::Result<()> {
         }
         CliCommand::Check(cmd) => {
             let client = get_client(&config, &args)?;
-            subcommands::check(cmd, client, args.errors_output).await
+            subcommands::check(cmd, client).await
         }
         CliCommand::Tree(cmd) => subcommands::tree(cmd).await,
         CliCommand::Info(cmd) => subcommands::info(cmd).await,

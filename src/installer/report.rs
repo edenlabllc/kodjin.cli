@@ -1,28 +1,41 @@
+use crate::installer;
 use console::style;
-use std::fmt;
 
 #[derive(Default, Debug)]
 pub struct InstallReport {
     pub created: usize,
+    pub removed: usize,
     pub errors: usize,
     pub already_existed: usize,
 }
 
-impl fmt::Display for InstallReport {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+impl InstallReport {
+    pub fn to_string(&self, action: installer::Action) -> String {
         let Self {
             created,
+            removed,
             errors,
             already_existed,
         } = self;
-        let total = created + errors + already_existed;
-        write!(
-            f,
-            "{} resources processed, {} created, {} errors, and {} already existed",
-            style(total).bold(),
-            style(created).bold(),
-            style(errors).bold(),
-            style(already_existed).bold(),
-        )
+        let total = created + removed + errors + already_existed;
+        match action {
+            installer::Action::Install => {
+                format!(
+                    "{} resources processed, {} created, {} errors, and {} already existed",
+                    style(total).bold(),
+                    style(created).bold(),
+                    style(errors).bold(),
+                    style(already_existed).bold(),
+                )
+            }
+            installer::Action::Uninstall => {
+                format!(
+                    "{} resources processed, {} removed, {} errors",
+                    style(total).bold(),
+                    style(removed).bold(),
+                    style(errors).bold(),
+                )
+            }
+        }
     }
 }

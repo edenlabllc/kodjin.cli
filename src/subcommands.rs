@@ -218,33 +218,12 @@ pub async fn uninstall(
     Ok(())
 }
 
-pub async fn check(
-    cmd: PackageCommand,
-    client: FhirClient,
-    errors_output: LogsOutput,
-) -> anyhow::Result<()> {
-    let multi_progress = MultiProgress::new();
-    let semaphore = Semaphore::new(5);
-
-    let packages = Mutex::new(HashMap::new());
+pub async fn check(cmd: PackageCommand, client: FhirClient) -> anyhow::Result<()> {
     let registry_client = RegistryClient::new(cmd.registry);
-
-    let ctx = InstallContext {
-        fhir_client: &client,
-        action: installer::Action::Install,
-        progress: &multi_progress,
-        packages_progress: &packages,
-        semaphore: &semaphore,
-        registry_client: &registry_client,
-        skip_strict_reference_versions: cmd.skip_strict_reference_versions,
-        existing_resources_behaviour: cmd.existing_resources,
-        errors_output: &errors_output,
-        start_time: chrono::Local::now(),
-    };
 
     match cmd.r#type {
         InstallType::Package => {
-            installer::check_package_installed(ctx, &registry_client, &cmd.name).await?;
+            installer::check_package_installed(&client, &registry_client, &cmd.name).await?;
         }
         InstallType::Directory => {
             todo!()
