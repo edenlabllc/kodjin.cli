@@ -51,6 +51,7 @@ pub struct InstallContext<'a> {
     pub semaphore: &'a Semaphore,
     pub registry_client: &'a RegistryClient,
     pub skip_strict_reference_versions: bool,
+    pub skip_dependencies: bool,
     pub existing_resources_behaviour: ExistingResourceBehaviour,
     pub errors_output: &'a LogsOutput,
     pub start_time: chrono::DateTime<chrono::Local>,
@@ -163,24 +164,26 @@ fn install_package<'a>(
         bar.set_style(bar_style);
         bar.set_message("Waiting for dependencies");
 
-        let dependency_tasks = manifest.dependencies.iter().map(|(name, version)| {
-            let package = format!("{name}@{version}");
-            let dependency_ctx = InstallContext {
-                existing_resources_behaviour: ExistingResourceBehaviour::Skip,
-                ..ctx
-            };
-            install_package_by_name(dependency_ctx, package)
-        });
+        if !ctx.skip_dependencies {
+            let dependency_tasks = manifest.dependencies.iter().map(|(name, version)| {
+                let package = format!("{name}@{version}");
+                let dependency_ctx = InstallContext {
+                    existing_resources_behaviour: ExistingResourceBehaviour::Skip,
+                    ..ctx
+                };
+                install_package_by_name(dependency_ctx, package)
+            });
 
-        try_join_all(dependency_tasks).await?;
+            try_join_all(dependency_tasks).await?;
 
-        bar.set_style(
-            ProgressStyle::with_template(&format!(
-                "{{spinner}} {}: {{wide_msg}} [{{pos}}/{{len}}]",
-                style(&package_req).bold()
-            ))
-            .unwrap(),
-        );
+            bar.set_style(
+                ProgressStyle::with_template(&format!(
+                    "{{spinner}} {}: {{wide_msg}} [{{pos}}/{{len}}]",
+                    style(&package_req).bold()
+                ))
+                .unwrap(),
+            );
+        }
 
         let install_status = match ctx.existing_resources_behaviour {
             ExistingResourceBehaviour::Skip => {
@@ -313,7 +316,6 @@ async fn uninstall_package<'a>(
         }
         bar.inc(1);
     }
-
     current_progress.lock().unwrap().state = InstallState::Completed;
 
     Ok(())

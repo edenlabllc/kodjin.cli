@@ -114,6 +114,9 @@ pub struct PackageCommand {
     /// keep them as-is instead
     #[clap(long, default_value_t = false)]
     pub skip_strict_reference_versions: bool,
+    /// Do not automatically install package dependencies
+    #[clap(long, default_value_t = false)]
+    pub skip_dependencies: bool,
 }
 
 #[derive(ValueEnum, Clone, Copy, Debug, Default)]
