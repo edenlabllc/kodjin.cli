@@ -117,6 +117,9 @@ pub struct PackageCommand {
     /// Do not automatically install package dependencies
     #[clap(long, default_value_t = false)]
     pub skip_dependencies: bool,
+    /// How many search requests can be performed in parallel when checking package files
+    #[clap(long, default_value_t = 10)]
+    pub parallel_search_requests: usize,
 }
 
 #[derive(ValueEnum, Clone, Copy, Debug, Default)]

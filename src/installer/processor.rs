@@ -13,7 +13,6 @@ use serde_json::Value;
 use std::time::Duration;
 use uuid::Uuid;
 
-pub const CONCURRENT_SEARCH_REQUESTS: usize = 20;
 const RESOURCE_TYPES_ORDER: &[&str] = &[
     "StructureDefinition",
     "SearchParameter",
@@ -294,6 +293,7 @@ pub async fn check_package_installed(
     package: &FhirPackage,
     client: &FhirClient,
     total_progress: &ProgressBar,
+    parallel_search_requests: usize,
 ) -> anyhow::Result<PackageInstallStatus> {
     let index = package.read_index()?;
 
@@ -310,7 +310,7 @@ pub async fn check_package_installed(
     });
 
     let missing = stream::iter(requests)
-        .buffer_unordered(CONCURRENT_SEARCH_REQUESTS)
+        .buffer_unordered(parallel_search_requests)
         .try_filter(|(_, id)| {
             let missing = id.is_none();
             async move { missing }

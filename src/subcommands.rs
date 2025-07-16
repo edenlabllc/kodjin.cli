@@ -164,6 +164,7 @@ pub async fn install(
         registry_client: &registry_client,
         skip_strict_reference_versions: cmd.skip_strict_reference_versions,
         skip_dependencies: cmd.skip_dependencies,
+        parallel_search_requests: cmd.parallel_search_requests,
         existing_resources_behaviour: cmd.existing_resources,
         errors_output: &errors_output,
         start_time: chrono::Local::now(),
@@ -203,6 +204,7 @@ pub async fn uninstall(
         skip_strict_reference_versions: cmd.skip_strict_reference_versions,
         skip_dependencies: cmd.skip_dependencies,
         existing_resources_behaviour: cmd.existing_resources,
+        parallel_search_requests: cmd.parallel_search_requests,
         errors_output: &errors_output,
         start_time: chrono::Local::now(),
     };
@@ -225,7 +227,13 @@ pub async fn check(cmd: PackageCommand, client: FhirClient) -> anyhow::Result<()
 
     match cmd.r#type {
         InstallType::Package => {
-            installer::check_package_installed(&client, &registry_client, &cmd.name).await?;
+            installer::check_package_installed(
+                &client,
+                &registry_client,
+                &cmd.name,
+                cmd.parallel_search_requests,
+            )
+            .await?;
         }
         InstallType::Directory => {
             todo!()

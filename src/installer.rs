@@ -10,7 +10,7 @@ const BASE_PACKAGE: &str = "hl7.fhir.r4.core";
 use crate::{
     args::{ExistingResourceBehaviour, LogsOutput},
     client::{operation_outcome::OperationOutcome, FhirClient, FhirError},
-    installer::processor::{find_installed_resource, CONCURRENT_SEARCH_REQUESTS},
+    installer::processor::find_installed_resource,
     print_values_table,
     registry::RegistryClient,
 };
@@ -52,6 +52,7 @@ pub struct InstallContext<'a> {
     pub registry_client: &'a RegistryClient,
     pub skip_strict_reference_versions: bool,
     pub skip_dependencies: bool,
+    pub parallel_search_requests: usize,
     pub existing_resources_behaviour: ExistingResourceBehaviour,
     pub errors_output: &'a LogsOutput,
     pub start_time: chrono::DateTime<chrono::Local>,
@@ -187,7 +188,13 @@ fn install_package<'a>(
 
         let install_status = match ctx.existing_resources_behaviour {
             ExistingResourceBehaviour::Skip => {
-                processor::check_package_installed(&package, ctx.fhir_client, bar).await?
+                processor::check_package_installed(
+                    &package,
+                    ctx.fhir_client,
+                    bar,
+                    ctx.parallel_search_requests,
+                )
+                .await?
             }
             ExistingResourceBehaviour::Overwrite => {
                 let index = package.read_index()?;
@@ -261,7 +268,7 @@ async fn uninstall_package<'a>(
     });
 
     let existing = stream::iter(requests)
-        .buffer_unordered(CONCURRENT_SEARCH_REQUESTS)
+        .buffer_unordered(ctx.parallel_search_requests)
         .filter_map(|result| async {
             match result {
                 Ok((info, Some(id))) => Some(Ok((info, id))),
@@ -570,6 +577,7 @@ pub async fn check_package_installed(
     fhir_client: &FhirClient,
     registry_client: &RegistryClient,
     package: &str,
+    parallel_search_requests: usize,
 ) -> anyhow::Result<()> {
     let package_req = PackageReq::from_str(package)?;
 
@@ -600,7 +608,13 @@ pub async fn check_package_installed(
             .progress_chars("#>-"),
     );
 
-    let status = processor::check_package_installed(&fhir_package, fhir_client, &bar).await?;
+    let status = processor::check_package_installed(
+        &fhir_package,
+        fhir_client,
+        &bar,
+        parallel_search_requests,
+    )
+    .await?;
     progress.clear()?;
 
     match status {
