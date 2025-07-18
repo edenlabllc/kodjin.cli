@@ -8,7 +8,7 @@ jobs:
   build:
     strategy:
       matrix:
-        target: [ x86_64-unknown-linux-musl,  aarch64-unknown-linux-musl, universal2-apple-darwin ]
+        target: [ x86_64-unknown-linux-musl,  aarch64-unknown-linux-musl, universal2-apple-darwin, x86_64-pc-windows-gnu ]
 
     runs-on: ubuntu-22.04
     container:
@@ -16,6 +16,10 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Install mingw
+        if: ${{ contains(matrix.target, 'windows') }}
+        run: apt install -y mingw-w64
 
       - name: Build binary for ${{ matrix.target }}
         run: cargo zigbuild --release --target ${{ matrix.target }}
