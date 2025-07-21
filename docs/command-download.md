@@ -14,7 +14,7 @@ The `download` command retrieves a FHIR package from the registry and saves it l
 Download all files from the package 
 ```shell
 $ kodjin-cli download hl7.fhir.uv.extensions.r4@5.1.0
-Package downloaded to hl7.fhir.uv.extensions.r4@5.1.0
+Package downloaded to /Users/bestuser/Downloads/kodji-cli/hl7.fhir.uv.extensions.r4@5.1.0
 ```
 
 Optaions:

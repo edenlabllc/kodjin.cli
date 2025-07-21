@@ -102,7 +102,7 @@ Options:
 ```
 
 ## list
-The `list` command displays all currently configured FHIR servers, including the default server (if set). This helps users quickly view available servers and manage their configurations.
+The `list` command displays all currently configured FHIR servers, including the default server (if set). This helps users quickly view available servers and manage their configurations. Default server id always listed first, then all servers with names in alphabetical order, and then all other servers in alphabetical order.
 
 **Usage:**
 ```shell
@@ -113,15 +113,19 @@ kodjin-cli server list
 ```shell
 $ kodjin-cli server list
 List of currently configured servers:
-- https://example.fhir.server/r4
-- https://demo.kodjin.com/fhir (default)
-- DEV (https://develop.com/fhir)
+- KODJIN-DEMO (https://demo.kodjin.com/fhir) (default)
+- dev (https://develop.com/fhir)
+- example (https://example.fhir.server/r4)
+- http://hapi.fhir.org/baseR4
+- https://server.fire.ly/r4
+
 ```
 
 Notes
 
 - The default server (if set) is clearly marked in the output.
 - The name of the server is written with server domain in the brackets
+- returns list of servers in aplpabetical order
 
 ## remove
 The `remove` command removes a previously added FHIR server from the configured list. This is useful for cleaning up unused or outdated server entries.
@@ -146,4 +150,4 @@ Notes
 - The server must already exist in the configured list, otherwise kodjin-cli will return an error.
 - If the server being removed is the default server, you may need to set a new default using `kodjin-cli server default`.
 - Use `kodjin-cli server list` to check which server is currently set as default.
-  
+
