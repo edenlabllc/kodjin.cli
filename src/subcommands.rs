@@ -27,7 +27,7 @@ pub async fn server(cmd: ServerCommand, mut config: Config, args: &Args) -> anyh
                 .map(|(name, server)| (name, server, false))
                 .collect::<Vec<_>>();
 
-            servers.sort_by_key(|(_, server, default)| (&server.url, *default));
+            servers.sort_by_key(|(name, server, default)| (&server.url, *name, *default));
 
             if let Some(default) = &config.current_server {
                 if let Some(server) = config.servers.get(default) {
