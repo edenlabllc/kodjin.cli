@@ -51,6 +51,14 @@ pub async fn server(cmd: ServerCommand, mut config: Config, args: &Args) -> anyh
                 bail!("Server {name} already exists");
             }
 
+            if let Some((name, _)) = config.servers.iter().find(|(_, server)| server.url == url) {
+                if *name == url {
+                    bail!("Server wth url {url} already exists");
+                } else {
+                    bail!("Server wth url {url} already exists ({name})");
+                }
+            }
+
             let bar = ProgressBar::new_spinner().with_message(format!("Checking server {url}"));
             bar.enable_steady_tick(Duration::from_millis(100));
 
