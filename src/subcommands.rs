@@ -23,17 +23,10 @@ pub async fn server(cmd: ServerCommand, mut config: Config, args: &Args) -> anyh
             let mut servers = config
                 .servers
                 .iter()
-                .filter(|(name, _)| config.current_server.as_ref() != Some(name))
-                .map(|(name, server)| (name, server, false))
+                .map(|(name, server)| (name, server, config.current_server.as_ref() == Some(name)))
                 .collect::<Vec<_>>();
 
-            servers.sort_by_key(|(name, server, default)| (&server.url, *name, *default));
-
-            if let Some(default) = &config.current_server {
-                if let Some(server) = config.servers.get(default) {
-                    servers.insert(0, (default, server, true));
-                }
-            }
+            servers.sort_by_key(|(name, server, default)| (!*default, *name, &server.url));
 
             for (server_name, server_config, is_default) in servers {
                 print!("- ");
