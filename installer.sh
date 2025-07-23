@@ -23,16 +23,23 @@ sudo sh -c "mkdir -p ${TARGET_PATH} && tar xf ${DOWNLOAD_PATH} -C ${TARGET_PATH}
 
 SHELL_NAME=$(basename "${SHELL}")
 
-
 case "${SHELL_NAME}" in
-  bash*)
+  bash)
     echo "Installing bash completions"
     sudo sh -c "mkdir -p /etc/bash_completion.d && kodjin-cli generate-completions bash > /etc/bash_completion.d/kodjin-cli.bash"
     ;;
-  fish*)
+  fish)
     echo "Installing fish completions"
     sudo sh -c "mkdir -p /etc/fish/completions && kodjin-cli generate-completions fish > /etc/fish/completions/kodjin-cli.fish"
     ;;
+  zsh)
+    SOURCE_COMPLETIONS="source <(kodjin-cli generate-completions zsh)"
+    if ! grep -q "${SOURCE_COMPLETIONS}"; then
+        echo "Installing zsh completions"
+        echo "${SOURCE_COMPLETIONS}" >> ~/.zshrc
+    else
+        echo "zsh completions were present already"
+    fi
 esac
 
 echo "Installation finished!"
