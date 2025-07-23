@@ -56,6 +56,14 @@ blobs:
     ids:
       - kodjin-cli
 
+  - bucket: edenlabllc-kodjin-cli
+    provider: s3
+    region: eu-north-1
+    directory: "{{ .ProjectName }}"
+    extra_files:
+      - glob: ./installer.sh
+    extra_files_only: true
+
 release:
   footer: >-
 
