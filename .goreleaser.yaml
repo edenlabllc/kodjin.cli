@@ -48,6 +48,14 @@ blobs:
     ids:
       - kodjin-cli
 
+  # Also upload as `latest`
+  - bucket: edenlabllc-kodjin-cli
+    provider: s3
+    region: eu-north-1
+    directory: "{{ .ProjectName }}/latest"
+    ids:
+      - kodjin-cli
+
 release:
   footer: >-
 
