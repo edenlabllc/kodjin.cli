@@ -65,6 +65,7 @@ blobs:
     extra_files_only: true
 
 release:
+  replace_existing_artifacts: true
   footer: >-
 
     ---
