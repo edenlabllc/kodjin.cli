@@ -4,11 +4,11 @@ description: The Kodjin CLI is a command-line tool designed to simplify the proc
 
 ## Installation
 
-TBD
+To install or update the version of `kosjin-cli` on you computer run the command
 
-## Update
-
-TBD
+```shell
+curl https://edenlabllc-kodjin-cli.s3.eu-north-1.amazonaws.com/kodjin-cli/installer.sh | sh -
+```
 
 ## Getting Started
 
