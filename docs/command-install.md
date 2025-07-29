@@ -2,6 +2,8 @@
 
 The `install` command installs a FHIR package, either from the official FHIR package registry or from a local directory. This allows users to easily retrieve and use FHIR Implementation Guides (IGs) and dependencies.
 
+!!! note "It is always better to use package to install conformance resources"
+
 **Usage:**
 ```shell
 kodjin-cli install [OPTIONS] <NAME>
