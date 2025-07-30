@@ -3,14 +3,17 @@ use super::{
     resource::{Resource, ResourceInfo},
     Action, InstallContext,
 };
-use crate::client::{FhirClient, FhirError};
+use crate::{
+    client::{FhirClient, FhirError},
+    installer::progress::{InstallProgress, InstallState},
+};
 use anyhow::{anyhow, Context};
 use console::style;
 use futures::{stream, StreamExt, TryStreamExt};
 use indexmap::IndexMap;
 use indicatif::{ProgressBar, ProgressStyle};
 use serde_json::Value;
-use std::time::Duration;
+use std::{sync::Mutex, time::Duration};
 use uuid::Uuid;
 
 const RESOURCE_TYPES_ORDER: &[&str] = &[
@@ -24,6 +27,7 @@ const RESOURCE_TYPES_ORDER: &[&str] = &[
 pub async fn process_resources(
     ctx: InstallContext<'_>,
     mut resources: IndexMap<String, Vec<Resource>>,
+    current_progress: &Mutex<InstallProgress>,
 ) -> usize {
     let count: usize = resources.values().map(|resources| resources.len()).sum();
 
@@ -37,15 +41,18 @@ pub async fn process_resources(
     // First we process resources in the defined order
     for resource_type in RESOURCE_TYPES_ORDER {
         if let Some(resources) = resources.shift_remove(*resource_type) {
-            processed_count += process_resources_type(ctx, resource_type, resources, &bar).await;
+            processed_count +=
+                process_resources_type(ctx, resource_type, resources, &bar, current_progress).await;
         }
     }
 
     // Process remaining resource types which were not in the list
     for (resource_type, resources) in resources.into_iter() {
-        processed_count += process_resources_type(ctx, &resource_type, resources, &bar).await;
+        processed_count +=
+            process_resources_type(ctx, &resource_type, resources, &bar, current_progress).await;
     }
 
+    current_progress.lock().unwrap().state = InstallState::Completed;
     bar.finish_and_clear();
 
     processed_count
@@ -57,10 +64,23 @@ async fn process_resources_type(
     resource_type: &str,
     resources: Vec<Resource>,
     bar: &ProgressBar,
+    current_progress: &Mutex<InstallProgress>,
 ) -> usize {
     let mut count = 0;
 
     for resource in resources {
+        bar.set_message(format!("Checking {resource_type} {}", resource.info.id));
+
+        let exists = find_installed_resource(ctx.fhir_client, &resource.info)
+            .await
+            .unwrap_or_else(|err| {
+                bar.suspend(|| {
+                    eprintln!("Could not check if resource exists: {err:#}");
+                    None
+                })
+            })
+            .is_some();
+
         bar.set_message(format!(
             "{} {resource_type} {}",
             ctx.action.bar_prefix(),
@@ -69,17 +89,10 @@ async fn process_resources_type(
 
         match ctx.action {
             Action::Install => {
-                let exists = find_installed_resource(ctx.fhir_client, &resource.info)
-                    .await
-                    .unwrap_or_else(|err| {
-                        bar.suspend(|| {
-                            eprintln!("Could not check if resource exists: {err:#}");
-                            None
-                        })
-                    })
-                    .is_some();
-
-                if !exists {
+                if exists {
+                    count += 1;
+                    current_progress.lock().unwrap().report.already_existed += 1;
+                } else {
                     let source_path = resource.source_path.clone();
                     let current_index = PackageIndex::default();
                     match process_resource(
@@ -92,36 +105,48 @@ async fn process_resources_type(
                     )
                     .await
                     {
-                        Ok(()) => count += 1,
+                        Ok(()) => {
+                            count += 1;
+                            current_progress.lock().unwrap().report.created += 1;
+                        }
                         Err(err) => {
                             bar.suspend(|| {
                                 let msg = format!(
                                     "Warning: could not process file {source_path:?}: {err:#}",
                                 );
-                                println!("{}", style(msg).yellow())
+                                println!("{}", style(msg).yellow());
                             });
+                            current_progress.lock().unwrap().report.errors += 1;
                         }
                     }
                 }
             }
-            Action::Uninstall => match ctx
-                .fhir_client
-                .delete(resource_type, &resource.info.id)
-                .await
-            {
-                Ok(()) => {
+            Action::Uninstall => {
+                if exists {
+                    match ctx
+                        .fhir_client
+                        .delete(resource_type, &resource.info.id)
+                        .await
+                    {
+                        Ok(()) => {
+                            count += 1;
+                            current_progress.lock().unwrap().report.removed += 1;
+                        }
+                        Err(err) => {
+                            bar.suspend(|| {
+                                    let msg = format!(
+                                        "Warning: could not delete resource {resource_type}/{}: {err:#}",
+                                        resource.info.id
+                                    );
+                                    println!("{}", style(msg).yellow());
+                                });
+                            current_progress.lock().unwrap().report.errors += 1;
+                        }
+                    }
+                } else {
                     count += 1;
                 }
-                Err(err) => {
-                    bar.suspend(|| {
-                        let msg = format!(
-                            "Warning: could not delete resource {resource_type}/{}: {err:#}",
-                            resource.info.id
-                        );
-                        println!("{}", style(msg).yellow())
-                    });
-                }
-            },
+            }
         }
 
         bar.inc(1);

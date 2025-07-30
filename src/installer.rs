@@ -511,7 +511,7 @@ pub async fn process_directory(ctx: InstallContext<'_>, root_path: &Path) -> any
 
         println!("{} resources loaded", style(count).bold());
 
-        let processed_count = processor::process_resources(ctx, resources).await;
+        let processed_count = processor::process_resources(ctx, resources, &current_progress).await;
 
         println!(
             "Processed {} resources in {}",
