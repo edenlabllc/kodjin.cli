@@ -18,24 +18,37 @@ use std::{fmt, sync::Arc, time::Duration};
 pub struct FhirClient {
     client: reqwest::Client,
     base_url: Arc<str>,
+    search_url: Arc<str>,
 }
 
 impl FhirClient {
-    pub fn new(url: String, insecure_certificates: bool, timeout: Duration) -> Self {
+    pub fn new(
+        url: String,
+        search_url: Option<String>,
+        insecure_certificates: bool,
+        timeout: Duration,
+    ) -> Self {
         let client = reqwest::Client::builder()
             .danger_accept_invalid_certs(insecure_certificates)
             .timeout(timeout)
             .build()
             .unwrap();
+
         Self {
             client,
-            base_url: url.into(),
+            base_url: url.as_str().into(),
+            search_url: search_url.unwrap_or(url).into(),
         }
     }
 
     /// Standard FHIR JSON request
     fn request(&self, method: Method, path: &str) -> RequestBuilder {
         let url = format!("{}{path}", self.base_url);
+        self.client.request(method, url)
+    }
+
+    fn search_request(&self, method: Method, path: &str) -> RequestBuilder {
+        let url = format!("{}{path}", self.search_url);
         self.client.request(method, url)
     }
 
@@ -81,7 +94,7 @@ impl FhirClient {
         params: &[(&str, &str)],
     ) -> Result<Bundle<T>, FhirError> {
         let response = self
-            .request(Method::GET, &format!("/{resource_type}"))
+            .search_request(Method::GET, &format!("/{resource_type}"))
             .query(params)
             .header("Prefer", "handling=strict")
             .send()

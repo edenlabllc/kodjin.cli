@@ -1,6 +1,7 @@
 use anyhow::{anyhow, Context};
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
+use serde_with::skip_serializing_none;
 use std::{fs, path::PathBuf};
 
 #[derive(Deserialize, Serialize, Default)]
@@ -41,9 +42,11 @@ impl Config {
     }
 }
 
+#[skip_serializing_none]
 #[derive(Deserialize, Serialize, Debug)]
 pub struct ServerConfig {
     pub url: String,
+    pub search_url: Option<String>,
 }
 
 fn config_path() -> PathBuf {

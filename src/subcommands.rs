@@ -44,7 +44,11 @@ pub async fn server(cmd: ServerCommand, mut config: Config, args: &Args) -> anyh
 
             Ok(())
         }
-        ServerCommand::Add { url, name } => {
+        ServerCommand::Add {
+            url,
+            name,
+            search_url,
+        } => {
             let name = name.unwrap_or_else(|| url.clone());
 
             if config.servers.contains_key(&name) {
@@ -64,12 +68,15 @@ pub async fn server(cmd: ServerCommand, mut config: Config, args: &Args) -> anyh
 
             let client = FhirClient::new(
                 url.clone(),
+                search_url.clone(),
                 args.insecure_certificates,
                 Duration::from_secs(args.request_timeout),
             );
             let metadata = client.get_metadata().await?;
 
-            config.servers.insert(name.clone(), ServerConfig { url });
+            config
+                .servers
+                .insert(name.clone(), ServerConfig { url, search_url });
             config.current_server = Some(name.clone());
 
             config.save()?;

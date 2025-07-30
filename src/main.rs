@@ -84,6 +84,7 @@ fn get_client(config: &Config, args: &Args) -> anyhow::Result<FhirClient> {
 
     Ok(FhirClient::new(
         server_config.url.clone(),
+        server_config.search_url.clone(),
         args.insecure_certificates,
         Duration::from_secs(args.request_timeout),
     ))

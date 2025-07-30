@@ -80,6 +80,10 @@ pub enum ServerCommand {
     /// Add a new FHIR server with the provided URL
     Add {
         url: String,
+        /// Override the url used for get and search operations.
+        /// By default, the main url is used.
+        #[clap(short, long)]
+        search_url: Option<String>,
         #[clap(short, long)]
         name: Option<String>,
     },
