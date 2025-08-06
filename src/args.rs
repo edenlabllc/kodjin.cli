@@ -24,6 +24,9 @@ pub struct Args {
     /// The default one will be used if not specified.
     #[clap(short, long)]
     pub server: Option<String>,
+    /// Additional header to be sent to the FHIR server.
+    #[clap(short = 'H', long)]
+    pub header: Vec<String>,
     /// Skip TLS certificate validation
     #[clap(long, default_value_t = false)]
     pub insecure_certificates: bool,

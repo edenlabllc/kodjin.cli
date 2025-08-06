@@ -4,15 +4,18 @@ mod codeable_concept;
 mod coding;
 pub mod operation_outcome;
 
-use anyhow::anyhow;
+use anyhow::{anyhow, Context};
 use bundle::Bundle;
 use capability_statement::CapabilityStatement;
 use colored_json::ToColoredJson;
 use operation_outcome::OperationOutcome;
-use reqwest::{Method, RequestBuilder, Response, StatusCode, Url};
+use reqwest::{
+    header::{HeaderMap, HeaderName, HeaderValue},
+    Method, RequestBuilder, Response, StatusCode, Url,
+};
 use serde::{de::DeserializeOwned, Serialize};
 use serde_json::Value;
-use std::{fmt, sync::Arc, time::Duration};
+use std::{fmt, str::FromStr, sync::Arc, time::Duration};
 
 #[derive(Clone)]
 pub struct FhirClient {
@@ -27,18 +30,33 @@ impl FhirClient {
         search_url: Option<String>,
         insecure_certificates: bool,
         timeout: Duration,
-    ) -> Self {
+        headers: &[String],
+    ) -> anyhow::Result<Self> {
+        let mut header_map = HeaderMap::new();
+
+        for header in headers {
+            let (key, value) = header
+                .split_once(':')
+                .context("Header param must contain ':'")?;
+
+            header_map.insert(
+                HeaderName::from_str(key)?,
+                HeaderValue::from_str(value.trim_ascii_start())?,
+            );
+        }
+
         let client = reqwest::Client::builder()
             .danger_accept_invalid_certs(insecure_certificates)
+            .default_headers(header_map)
             .timeout(timeout)
             .build()
             .unwrap();
 
-        Self {
+        Ok(Self {
             client,
             base_url: url.as_str().into(),
             search_url: search_url.unwrap_or(url).into(),
-        }
+        })
     }
 
     /// Standard FHIR JSON request

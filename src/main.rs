@@ -82,12 +82,13 @@ fn get_client(config: &Config, args: &Args) -> anyhow::Result<FhirClient> {
         None => config.get_current_server()?,
     };
 
-    Ok(FhirClient::new(
+    FhirClient::new(
         server_config.url.clone(),
         server_config.search_url.clone(),
         args.insecure_certificates,
         Duration::from_secs(args.request_timeout),
-    ))
+        &args.header,
+    )
 }
 
 fn print_values_table(values: &[(&str, Option<impl Deref<Target = str>>)]) {

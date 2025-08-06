@@ -71,7 +71,8 @@ pub async fn server(cmd: ServerCommand, mut config: Config, args: &Args) -> anyh
                 search_url.clone(),
                 args.insecure_certificates,
                 Duration::from_secs(args.request_timeout),
-            );
+                &args.header,
+            )?;
             let metadata = client.get_metadata().await?;
 
             config
