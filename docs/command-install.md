@@ -84,7 +84,7 @@ Notes
 - The specified registry must follow the [FHIR package specification](http://hl7.org/fhir/packages.html).
 - If no `--registry` option is provided, the default registry is used.
 - This option is useful for organizations that maintain private or custom FHIR package repositories.
-  
+
 ## --existing-resources
 
 Defines how kodjin-cli should handle resources that already exist on the FHIR server when installing a package. This option is particularly useful for subsequent package installations.
@@ -139,6 +139,33 @@ Notes
 - Use this option carefully, as improper reference handling may cause validation or compatibility issues.
 - For more details on FHIR references and canonical URLs, refer to the FHIR documentation.
 
+## --skip-dependencies
+
+Skips installing dependencies. By default, when installing packages, kodjin-cli also installs all missing dependencies. To view these dependencies, users can use the `kodjin-cli tree` command.
+
+**Examples:**
+```shell
+$ kodjin-cli install --skip-dependencies hl7.fhir.us.core@4.0.0
+hl7.fhir.us.core@4.0.0: installing 109 resources
+```
+
+Notes
+
+-  Use this option carefully, as missing dependencies may cause validation errors.
+
+## --parallel-search-requests <PARALLEL_SEARCH_REQUESTS>
+
+Specifies how many search requests can be performed in parallel when checking package files. This can improve performance by speeding up operations that involve remote lookups or validations.
+
+**Examples**
+```shell
+$ kodjin-cli install --parallel-search-requests 8 hl7.fhir.us.core@4.0.0
+```
+
+Notes
+
+- A higher number may speed up processing but can increase system load or trigger rate limits, depending on your environment.
+- Default number is 10
 
 ## --help
 
@@ -189,6 +216,14 @@ Options:
 
       --skip-strict-reference-versions
           Do not change profile references to be version-specific, keep them as-is instead
+
+      --skip-dependencies
+          Do not automatically install package dependencies
+
+      --parallel-search-requests <PARALLEL_SEARCH_REQUESTS>
+          How many search requests can be performed in parallel when checking package files
+
+          [default: 10]
 
   -h, --help
           Print help (see a summary with '-h')
