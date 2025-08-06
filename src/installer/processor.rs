@@ -163,15 +163,17 @@ pub async fn process_resource(
     current_package: &str,
     bar: &ProgressBar,
 ) -> Result<(), FhirError> {
-    preprocess_resource(
-        &mut resource,
-        ctx.fhir_client,
-        ctx.skip_strict_reference_versions,
-        resource_type,
-        current_index,
-        bar,
-    )
-    .await?;
+    if !ctx.skip_preprocessing {
+        preprocess_resource(
+            &mut resource,
+            ctx.fhir_client,
+            ctx.skip_strict_reference_versions,
+            resource_type,
+            current_index,
+            bar,
+        )
+        .await?;
+    }
 
     ctx.fhir_client
         .upsert(resource_type, &resource.info.id, &resource.data)

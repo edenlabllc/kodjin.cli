@@ -50,6 +50,7 @@ pub struct InstallContext<'a> {
     pub packages_progress: &'a Mutex<HashMap<String, Arc<Mutex<InstallProgress>>>>,
     pub semaphore: &'a Semaphore,
     pub registry_client: &'a RegistryClient,
+    pub skip_preprocessing: bool,
     pub skip_strict_reference_versions: bool,
     pub skip_dependencies: bool,
     pub parallel_search_requests: usize,

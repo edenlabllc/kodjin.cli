@@ -63,9 +63,12 @@ pub enum CliCommand {
     Download {
         /// Perform resource preprocessing that is normally done before installation
         ///
-        /// Currently does the following:
+        /// Currently this does the following:
+        ///
         /// - Generates new resource ids for canonical resources (ones that have a url and version present)
+        ///
         /// - Generates snapshots for StructureDefinition resources where they are missing
+        ///
         /// - Makes references to other profiles within the current package in StructureDefinition resources version-specific
         #[clap(long, default_value_t = false)]
         preprocess: bool,
@@ -127,6 +130,18 @@ pub struct PackageCommand {
     /// How many search requests can be performed in parallel when checking package files
     #[clap(long, default_value_t = 10)]
     pub parallel_search_requests: usize,
+    /// Skip resource preprocessing.
+    /// This can be useful if you want to e.g. keep original resource IDs.
+    ///
+    /// Currently preprocessing does the following:
+    ///
+    /// - Generates new resource ids for canonical resources (ones that have a url and version present)
+    ///
+    /// - Generates snapshots for StructureDefinition resources where they are missing
+    ///
+    /// - Makes references to other profiles within the current package in StructureDefinition resources version-specific
+    #[clap(long, default_value_t = false)]
+    pub skip_preprocessing: bool,
 }
 
 #[derive(ValueEnum, Clone, Copy, Debug, Default)]
