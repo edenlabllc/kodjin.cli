@@ -4,6 +4,7 @@ use super::{
     Action, InstallContext,
 };
 use crate::{
+    args::ExistingResourceBehaviour,
     client::{FhirClient, FhirError},
     installer::progress::{InstallProgress, InstallState},
 };
@@ -24,10 +25,11 @@ const RESOURCE_TYPES_ORDER: &[&str] = &[
     "ConceptMap",
 ];
 
-pub async fn process_resources(
+pub async fn process_directory_resources(
     ctx: InstallContext<'_>,
     mut resources: IndexMap<String, Vec<Resource>>,
     current_progress: &Mutex<InstallProgress>,
+    name: &str,
 ) -> usize {
     let count: usize = resources.values().map(|resources| resources.len()).sum();
 
@@ -42,14 +44,16 @@ pub async fn process_resources(
     for resource_type in RESOURCE_TYPES_ORDER {
         if let Some(resources) = resources.shift_remove(*resource_type) {
             processed_count +=
-                process_resources_type(ctx, resource_type, resources, &bar, current_progress).await;
+                process_resources_type(ctx, resource_type, resources, &bar, current_progress, name)
+                    .await;
         }
     }
 
     // Process remaining resource types which were not in the list
     for (resource_type, resources) in resources.into_iter() {
         processed_count +=
-            process_resources_type(ctx, &resource_type, resources, &bar, current_progress).await;
+            process_resources_type(ctx, &resource_type, resources, &bar, current_progress, name)
+                .await;
     }
 
     current_progress.lock().unwrap().state = InstallState::Completed;
@@ -65,22 +69,38 @@ async fn process_resources_type(
     resources: Vec<Resource>,
     bar: &ProgressBar,
     current_progress: &Mutex<InstallProgress>,
+    pkg_name: &str,
 ) -> usize {
-    let mut count = 0;
+    bar.reset();
+    bar.set_length(resources.len() as u64);
+    bar.set_message(format!("Checking {resource_type} resources"));
 
-    for resource in resources {
-        bar.set_message(format!("Checking {resource_type} {}", resource.info.id));
+    let requests = resources.into_iter().map(|resource| async {
+        let exists = find_installed_resource(ctx.fhir_client, &resource.info).await?;
 
-        let exists = find_installed_resource(ctx.fhir_client, &resource.info)
-            .await
-            .unwrap_or_else(|err| {
-                bar.suspend(|| {
-                    eprintln!("Could not check if resource exists: {err:#}");
-                    None
-                })
-            })
-            .is_some();
+        bar.inc(1);
 
+        anyhow::Ok((resource, exists))
+    });
+
+    let result = stream::iter(requests)
+        .buffered(ctx.parallel_search_requests)
+        .try_collect::<Vec<_>>()
+        .await;
+
+    let resources = match result {
+        Ok(resources) => resources,
+        Err(err) => {
+            eprintln!("{err:#}");
+            return 0;
+        }
+    };
+
+    bar.reset();
+
+    let mut processed_count = 0;
+
+    for (resource, existing_id) in resources {
         bar.set_message(format!(
             "{} {resource_type} {}",
             ctx.action.bar_prefix(),
@@ -88,11 +108,14 @@ async fn process_resources_type(
         ));
 
         match ctx.action {
-            Action::Install => {
-                if exists {
-                    count += 1;
+            Action::Install => match ctx.existing_resources_behaviour {
+                ExistingResourceBehaviour::Skip if existing_id.is_some() => {
+                    processed_count += 1;
                     current_progress.lock().unwrap().report.already_existed += 1;
-                } else {
+                }
+                ExistingResourceBehaviour::Overwrite | ExistingResourceBehaviour::Skip => {
+                    let is_update = existing_id.is_some();
+
                     let source_path = resource.source_path.clone();
                     let current_index = PackageIndex::default();
                     match process_resource(
@@ -100,14 +123,19 @@ async fn process_resources_type(
                         resource_type,
                         resource,
                         &current_index,
-                        "local",
+                        pkg_name,
                         bar,
+                        existing_id,
                     )
                     .await
                     {
                         Ok(()) => {
-                            count += 1;
-                            current_progress.lock().unwrap().report.created += 1;
+                            processed_count += 1;
+                            if is_update {
+                                current_progress.lock().unwrap().report.updated += 1;
+                            } else {
+                                current_progress.lock().unwrap().report.created += 1;
+                            }
                         }
                         Err(err) => {
                             bar.suspend(|| {
@@ -120,16 +148,12 @@ async fn process_resources_type(
                         }
                     }
                 }
-            }
+            },
             Action::Uninstall => {
-                if exists {
-                    match ctx
-                        .fhir_client
-                        .delete(resource_type, &resource.info.id)
-                        .await
-                    {
+                if let Some(id) = existing_id {
+                    match ctx.fhir_client.delete(resource_type, &id).await {
                         Ok(()) => {
-                            count += 1;
+                            processed_count += 1;
                             current_progress.lock().unwrap().report.removed += 1;
                         }
                         Err(err) => {
@@ -144,7 +168,7 @@ async fn process_resources_type(
                         }
                     }
                 } else {
-                    count += 1;
+                    processed_count += 1;
                 }
             }
         }
@@ -152,7 +176,7 @@ async fn process_resources_type(
         bar.inc(1);
     }
 
-    count
+    processed_count
 }
 
 pub async fn process_resource(
@@ -162,6 +186,7 @@ pub async fn process_resource(
     current_index: &PackageIndex,
     current_package: &str,
     bar: &ProgressBar,
+    id_override: Option<String>,
 ) -> Result<(), FhirError> {
     if !ctx.skip_preprocessing {
         preprocess_resource(
@@ -175,13 +200,20 @@ pub async fn process_resource(
         .await?;
     }
 
+    let is_update = id_override.is_some();
+    if let Some(id) = id_override {
+        resource.set_id(id);
+    }
+
     ctx.fhir_client
         .upsert(resource_type, &resource.info.id, &resource.data)
         .await?;
 
     bar.suspend(|| {
+        let verb = if is_update { "Updated" } else { "Created" };
+
         print!(
-            "[{}] Created {resource_type} ",
+            "[{}] {verb} {resource_type} ",
             style(current_package).bold()
         );
         if let Some(url) = &resource.info.url {

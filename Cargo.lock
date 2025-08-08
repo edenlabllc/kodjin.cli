@@ -967,7 +967,7 @@ dependencies = [
 
 [[package]]
 name = "kodjin-cli"
-version = "0.0.8"
+version = "0.1.0"
 dependencies = [
  "anyhow",
  "async-trait",

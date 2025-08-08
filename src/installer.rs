@@ -219,7 +219,7 @@ fn install_package<'a>(
             current_progress.lock().unwrap().report.already_existed =
                 index.files.len() - missing_files.len();
 
-            process_files(
+            process_package_files(
                 ctx,
                 &package,
                 manifest,
@@ -346,7 +346,7 @@ async fn resolve_version_info(
     Ok((package_info, version_info))
 }
 
-async fn process_files(
+async fn process_package_files(
     ctx: InstallContext<'_>,
     package: &FhirPackage,
     manifest: PackageManifest,
@@ -398,6 +398,7 @@ async fn process_files(
             current_index,
             &full_name,
             bar,
+            None,
         )
         .await
         {
@@ -512,7 +513,9 @@ pub async fn process_directory(ctx: InstallContext<'_>, root_path: &Path) -> any
 
         println!("{} resources loaded", style(count).bold());
 
-        let processed_count = processor::process_resources(ctx, resources, &current_progress).await;
+        let processed_count =
+            processor::process_directory_resources(ctx, resources, &current_progress, &pkg_name)
+                .await;
 
         println!(
             "Processed {} resources in {}",
@@ -988,6 +991,7 @@ fn log_resource_error(
         }),
         LogsOutput::Directory | LogsOutput::Custom(_) => {
             let logs_dir = ctx.errors_output.get_dir().unwrap();
+            // TODO: keep the file open with buffered writes
             let path = package_log_file(&logs_dir, pkg_name, ctx.start_time);
             match std::fs::OpenOptions::new()
                 .append(true)
