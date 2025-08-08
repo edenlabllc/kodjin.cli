@@ -95,6 +95,7 @@ kodjin-cli install <NAME> --existing-resources <skip|overwrite>
 ```
 
 Possible values:
+
 - `skip` - When using skip, kodjin-cli will skip resources that are already installed on the server. Is a dedault value.
 - `overwrite` - When using overwrite kodjin-cli will update resources, if they are already exist on the server
 
