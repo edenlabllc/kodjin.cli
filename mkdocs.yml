@@ -24,6 +24,7 @@ nav:
   - Installation: installation.md
   - Synopsis: synoptis.md
   - Command auto-completion: command-auto-completion.md
+  - Authentication: authentication.md
   - Global options: global-options.md
   - Commands: 
     - server: command-server.md
