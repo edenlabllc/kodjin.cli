@@ -153,6 +153,34 @@ Notes
 
 -  Use this option carefully, as missing dependencies may cause validation errors.
 
+## --skip-preprocessing
+
+Disables resource preprocessing during package installation. This option preserves the original state of resources as they exist in the package, bypassing the automatic modifications that kodjin-cli normally applies.
+
+**Usage:**
+```shell
+kodjin-cli install --skip-preprocessing <NAME>
+```
+
+By default, kodjin-cli performs preprocessing on resources during installation, which includes:
+
+- Generating new resource IDs for canonical resources (those with a url and version)
+- Generating missing snapshots for StructureDefinition resources
+- Making references to other profiles within the current package version-specific in StructureDefinition resources
+
+When `--skip-preprocessing` is used, these automatic modifications are bypassed, and resources are installed exactly as they appear in the original package.
+
+**Examples:**
+```shell
+$ kodjin-cli install --skip-preprocessing hl7.fhir.us.core@4.0.0
+```
+
+Notes
+
+- This option is useful when you want to preserve original resource IDs or maintain the exact structure of the package as published.
+- Use this option carefully, as skipping preprocessing may result in missing snapshots or non-version-specific references, which could affect validation or compatibility.
+- Consider the implications of preserving original resource IDs, especially in environments where ID conflicts might occur.
+
 ## --parallel-search-requests <PARALLEL_SEARCH_REQUESTS>
 
 Specifies how many search requests can be performed in parallel when checking package files. This can improve performance by speeding up operations that involve remote lookups or validations.
@@ -224,6 +252,17 @@ Options:
           How many search requests can be performed in parallel when checking package files
 
           [default: 10]
+
+      --skip-preprocessing
+          Skip resource preprocessing. This can be useful if you want to e.g. keep original resource IDs.
+
+          Currently preprocessing does the following:
+
+          - Generates new resource ids for canonical resources (ones that have a url and version present)
+
+          - Generates snapshots for StructureDefinition resources where they are missing
+
+          - Makes references to other profiles within the current package in StructureDefinition resources version-specific
 
   -h, --help
           Print help (see a summary with '-h')
