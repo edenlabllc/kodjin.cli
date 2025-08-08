@@ -16,9 +16,9 @@ For example, if you enter `kodjin-cli in` and press **Tab** then kodjin-cli will
 $ kodjin-cli in[Tab]
 info     -- Show information about a FHIR package
 install  -- Install a FHIR package
-```  
+```
 
 If you enter `kodjin-cli ins` and press **Tab** then kodjin-cli will autocomplete the command
-```shell 
+```shell
 $ kodjin-cli install
 ```
