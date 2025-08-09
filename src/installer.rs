@@ -135,7 +135,7 @@ pub fn install_package_by_name(
 
         let package = downloader::download_package(
             ctx.registry_client,
-            package_req.name.clone(),
+            package_req.name.to_string(),
             version_info.clone(),
             bar.clone(),
         )
@@ -598,7 +598,7 @@ pub async fn check_package_installed(
 
     let fhir_package = downloader::download_package(
         registry_client,
-        package_req.name.clone(),
+        package_req.name.to_string(),
         version_info,
         bar.clone(),
     )
@@ -705,7 +705,7 @@ pub fn print_tree<'a>(
 
         let fhir_package = downloader::download_package(
             registry_client,
-            package_req.name.clone(),
+            package_req.name.to_string(),
             version_info.clone(),
             bar.clone(),
         )
@@ -749,7 +749,7 @@ pub async fn info(registry_client: &RegistryClient, package: &str) -> anyhow::Re
 
     let fhir_package = downloader::download_package(
         registry_client,
-        package_req.name.clone(),
+        package_req.name.to_string(),
         version_info.clone(),
         bar.clone(),
     )
@@ -839,7 +839,7 @@ pub async fn download(
 
     let fhir_package = downloader::download_package_to(
         registry_client,
-        package_req.name.clone(),
+        package_req.name.to_string(),
         version_info.clone(),
         bar.clone(),
         full_final_path,
