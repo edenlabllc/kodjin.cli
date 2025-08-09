@@ -19,7 +19,7 @@ impl InstallReport {
             errors,
             already_existed,
         } = self;
-        let total = created + removed + errors + already_existed;
+        let total = created + updated + removed + errors + already_existed;
         match action {
             installer::Action::Install => {
                 format!(

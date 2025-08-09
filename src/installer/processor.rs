@@ -186,7 +186,7 @@ pub async fn process_resource(
     current_index: &PackageIndex,
     current_package: &str,
     bar: &ProgressBar,
-    id_override: Option<String>,
+    existing_id: Option<String>,
 ) -> Result<(), FhirError> {
     if !ctx.skip_preprocessing {
         preprocess_resource(
@@ -200,8 +200,8 @@ pub async fn process_resource(
         .await?;
     }
 
-    let is_update = id_override.is_some();
-    if let Some(id) = id_override {
+    let is_update = existing_id.is_some();
+    if let Some(id) = existing_id {
         resource.set_id(id);
     }
 
