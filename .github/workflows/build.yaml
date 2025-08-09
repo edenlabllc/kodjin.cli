@@ -4,15 +4,17 @@ on:
   push:
     tags:
       - "*"
+    branches: ['master']
 
 permissions:
   contents: write
 
 jobs:
-  build:
+  setup:
     runs-on: ubuntu-24.04
     container:
       image: messense/cargo-zigbuild:0.20.0
+
     steps:
       - name: Install dependencies
         run: |
@@ -36,8 +38,44 @@ jobs:
       - name: Set up build cache
         uses: Swatinem/rust-cache@v2
 
+  release:
+    if: (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/'))
+    runs-on: ubuntu-24.04
+    needs: setup
+    container:
+      image: messense/cargo-zigbuild:0.20.0
+
+    steps:
       - name: Build and release
         run: goreleaser release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+
+  release-nightly:
+    if: (github.event_name == 'push' && github.ref == 'refs/heads/master')
+    runs-on: ubuntu-24.04
+    needs: setup
+    container:
+      image: messense/cargo-zigbuild:0.20.0
+
+    steps:
+      - name: Build
+        run: goreleaser build --clean --snapshot
+
+      - name: Create nightly release
+        uses: ncipollo/release-action@v1.14.0
+        with:
+          removeArtifacts: true
+          allowUpdates: true
+          artifactErrorsFailBuild: false
+          artifacts: "dist/kodjin-cli*"
+          body: ${{ github.event.head_commit.message }}
+          prerelease: true
+          name: Nightly release
+          tag: nightly
+
+      - name: Update the nightly tag
+        run: |
+          git tag -f nightly
+          git push -f origin nightly
