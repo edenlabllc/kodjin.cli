@@ -144,12 +144,14 @@ pub struct PackageCommand {
     pub skip_preprocessing: bool,
 }
 
-#[derive(ValueEnum, Clone, Copy, Debug, Default)]
+#[derive(ValueEnum, Clone, Copy, Debug, Default, PartialEq)]
 pub enum ExistingResourceBehaviour {
     /// Skip existing resources
     #[default]
     Skip,
-    /// Overwrite existing resources
+    /// Update existing resources if they are different from what's being installed
+    Sync,
+    /// Always overwrite existing resources
     Overwrite,
 }
 

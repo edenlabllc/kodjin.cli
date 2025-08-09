@@ -197,6 +197,7 @@ fn install_package<'a>(
                 )
                 .await?
             }
+            ExistingResourceBehaviour::Sync => bail!("Currently not supported for FHIR packages"),
             ExistingResourceBehaviour::Overwrite => {
                 let index = package.read_index()?;
                 PackageInstallStatus::NotInstalled(index.files)
@@ -284,7 +285,7 @@ async fn uninstall_package<'a>(
 
     println!("Found {} resources to remove", style(existing.len()).bold());
 
-    for (file, id) in existing {
+    for (file, (id, _)) in existing {
         bar.set_message(format!(
             "{} {} {id}",
             ctx.action.bar_prefix(),
@@ -402,8 +403,12 @@ async fn process_package_files(
         )
         .await
         {
-            Ok(()) => {
-                current_progress.lock().unwrap().report.created += 1;
+            Ok(result) => {
+                current_progress
+                    .lock()
+                    .unwrap()
+                    .report
+                    .add_install_result(result);
             }
             Err(error) => {
                 let path: PathBuf = file_path.components().skip(1).collect();

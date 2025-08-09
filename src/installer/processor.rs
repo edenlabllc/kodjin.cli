@@ -6,7 +6,10 @@ use super::{
 use crate::{
     args::ExistingResourceBehaviour,
     client::{FhirClient, FhirError},
-    installer::progress::{InstallProgress, InstallState},
+    installer::{
+        progress::{InstallProgress, InstallState},
+        resource::is_resource_changed,
+    },
 };
 use anyhow::{anyhow, Context};
 use console::style;
@@ -100,7 +103,7 @@ async fn process_resources_type(
 
     let mut processed_count = 0;
 
-    for (resource, existing_id) in resources {
+    for (resource, existing) in resources {
         bar.set_message(format!(
             "{} {resource_type} {}",
             ctx.action.bar_prefix(),
@@ -109,13 +112,11 @@ async fn process_resources_type(
 
         match ctx.action {
             Action::Install => match ctx.existing_resources_behaviour {
-                ExistingResourceBehaviour::Skip if existing_id.is_some() => {
+                ExistingResourceBehaviour::Skip if existing.is_some() => {
                     processed_count += 1;
                     current_progress.lock().unwrap().report.already_existed += 1;
                 }
-                ExistingResourceBehaviour::Overwrite | ExistingResourceBehaviour::Skip => {
-                    let is_update = existing_id.is_some();
-
+                _ => {
                     let source_path = resource.source_path.clone();
                     let current_index = PackageIndex::default();
                     match process_resource(
@@ -125,17 +126,17 @@ async fn process_resources_type(
                         &current_index,
                         pkg_name,
                         bar,
-                        existing_id,
+                        existing,
                     )
                     .await
                     {
-                        Ok(()) => {
+                        Ok(result) => {
                             processed_count += 1;
-                            if is_update {
-                                current_progress.lock().unwrap().report.updated += 1;
-                            } else {
-                                current_progress.lock().unwrap().report.created += 1;
-                            }
+                            current_progress
+                                .lock()
+                                .unwrap()
+                                .report
+                                .add_install_result(result);
                         }
                         Err(err) => {
                             bar.suspend(|| {
@@ -150,7 +151,7 @@ async fn process_resources_type(
                 }
             },
             Action::Uninstall => {
-                if let Some(id) = existing_id {
+                if let Some((id, _)) = existing {
                     match ctx.fhir_client.delete(resource_type, &id).await {
                         Ok(()) => {
                             processed_count += 1;
@@ -179,6 +180,7 @@ async fn process_resources_type(
     processed_count
 }
 
+#[allow(clippy::too_many_arguments)]
 pub async fn process_resource(
     ctx: InstallContext<'_>,
     resource_type: &str,
@@ -186,8 +188,8 @@ pub async fn process_resource(
     current_index: &PackageIndex,
     current_package: &str,
     bar: &ProgressBar,
-    existing_id: Option<String>,
-) -> Result<(), FhirError> {
+    existing_resource: Option<(String, Value)>,
+) -> Result<InstallResult, FhirError> {
     if !ctx.skip_preprocessing {
         preprocess_resource(
             &mut resource,
@@ -200,30 +202,49 @@ pub async fn process_resource(
         .await?;
     }
 
-    let is_update = existing_id.is_some();
-    if let Some(id) = existing_id {
+    let result = if let Some((id, existing_data)) = existing_resource {
         resource.set_id(id);
-    }
 
-    ctx.fhir_client
-        .upsert(resource_type, &resource.info.id, &resource.data)
-        .await?;
+        if ctx.existing_resources_behaviour == ExistingResourceBehaviour::Overwrite
+            || is_resource_changed(existing_data, resource.data.clone())
+        {
+            ctx.fhir_client
+                .upsert(resource_type, &resource.info.id, &resource.data)
+                .await?;
+            InstallResult::Updated
+        } else {
+            InstallResult::Skipped
+        }
+    } else {
+        ctx.fhir_client
+            .upsert(resource_type, &resource.info.id, &resource.data)
+            .await?;
+
+        InstallResult::Created
+    };
 
     bar.suspend(|| {
-        let verb = if is_update { "Updated" } else { "Created" };
-
-        print!(
-            "[{}] {verb} {resource_type} ",
-            style(current_package).bold()
-        );
-        if let Some(url) = &resource.info.url {
-            println!("{}", style(url).bold());
-        } else {
-            println!("{}", style(resource.source_path.display()).bold());
+        if result != InstallResult::Skipped {
+            print!(
+                "[{}] {result:?} {resource_type} ",
+                style(current_package).bold()
+            );
+            if let Some(url) = &resource.info.url {
+                println!("{}", style(url).bold());
+            } else {
+                println!("{}", style(resource.source_path.display()).bold());
+            }
         }
     });
 
-    Ok(())
+    Ok(result)
+}
+
+#[derive(Debug, PartialEq)]
+pub enum InstallResult {
+    Created,
+    Updated,
+    Skipped,
 }
 
 /// Returns true if the resource was altered in any way
@@ -396,7 +417,7 @@ pub enum PackageInstallStatus {
 pub(super) async fn find_installed_resource(
     client: &FhirClient,
     resource_info: &ResourceInfo,
-) -> anyhow::Result<Option<String>> {
+) -> anyhow::Result<Option<(String, Value)>> {
     let mut search_params: Vec<(&str, &str)> = vec![];
     if let Some(url) = &resource_info.url {
         search_params.push(("url", url));
@@ -409,23 +430,36 @@ pub(super) async fn find_installed_resource(
     }
 
     let bundle = client
-        .search::<ResourceInfo>(&resource_info.resource_type, &search_params)
+        .search::<Value>(&resource_info.resource_type, &search_params)
         .await
         .context("Could not search currently installed resources")?;
 
-    let id = bundle.entry.into_iter().find_map(|entry| {
-        entry
-            .resource
-            .filter(|resource| {
-                (resource.url.is_some()
-                    && resource.url == resource_info.url
-                    && resource.version == resource_info.version)
-                    || (resource_info.url.is_none() && resource.id == resource_info.id)
-            })
-            .map(|resource| resource.id)
-    });
+    let existing_resource = bundle
+        .entry
+        .into_iter()
+        .filter_map(|entry| entry.resource)
+        .find_map(|resource| {
+            let url = resource.get("url").and_then(Value::as_str);
+            let version = resource.get("version").and_then(Value::as_str);
+            let id = resource
+                .get("id")
+                .and_then(Value::as_str)
+                .expect("Server returned resource without a valid id")
+                .to_owned();
 
-    Ok(id)
+            let matches = (url.is_some()
+                && url == resource_info.url.as_deref()
+                && version == resource_info.version.as_deref())
+                || (resource_info.url.is_none() && id == resource_info.id);
+
+            if matches {
+                Some((id, resource))
+            } else {
+                None
+            }
+        });
+
+    Ok(existing_resource)
 }
 
 #[cfg(test)]

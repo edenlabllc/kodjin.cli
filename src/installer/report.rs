@@ -1,4 +1,4 @@
-use crate::installer;
+use crate::installer::{self, processor::InstallResult};
 use console::style;
 
 #[derive(Default, Debug)]
@@ -11,7 +11,15 @@ pub struct InstallReport {
 }
 
 impl InstallReport {
-    pub fn to_string(&self, action: installer::Action) -> String {
+    pub fn add_install_result(&mut self, result: InstallResult) {
+        match result {
+            InstallResult::Created => self.created += 1,
+            InstallResult::Updated => self.updated += 1,
+            InstallResult::Skipped => self.already_existed += 1,
+        }
+    }
+
+    pub fn total_count(&self) -> usize {
         let Self {
             created,
             removed,
@@ -19,7 +27,18 @@ impl InstallReport {
             errors,
             already_existed,
         } = self;
-        let total = created + updated + removed + errors + already_existed;
+        created + updated + removed + errors + already_existed
+    }
+
+    pub fn to_string(&self, action: installer::Action) -> String {
+        let total = self.total_count();
+        let Self {
+            created,
+            removed,
+            updated,
+            errors,
+            already_existed,
+        } = self;
         match action {
             installer::Action::Install => {
                 format!(

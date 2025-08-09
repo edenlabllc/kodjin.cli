@@ -48,7 +48,7 @@ jobs:
         if: (github.event_name == 'push' && github.ref == 'refs/heads/master')
         run: |
           goreleaser build --clean --snapshot
-          mkdir artifacts
+          mkdir -p artifacts/dist
           for file in dist/*/kodjin-cli; do
               mv "$file" "./artifacts/$(dirname "$file")"
           done
@@ -60,7 +60,7 @@ jobs:
           removeArtifacts: true
           allowUpdates: true
           artifactErrorsFailBuild: false
-          artifacts: "artifacts/*"
+          artifacts: "artifacts/dist/*"
           body: ${{ github.event.head_commit.message }}
           prerelease: true
           name: Nightly release
