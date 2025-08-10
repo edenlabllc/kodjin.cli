@@ -1,5 +1,5 @@
 use super::{
-    package::{FhirPackage, PackageIndex, PackageIndexFile},
+    package::{PackageIndex, PackageIndexFile},
     resource::{Resource, ResourceInfo},
     Action, InstallContext,
 };
@@ -111,48 +111,42 @@ async fn process_resources_type(
         ));
 
         match ctx.action {
-            Action::Install => match ctx.existing_resources_behaviour {
-                ExistingResourceBehaviour::Skip if existing.is_some() => {
-                    processed_count += 1;
-                    current_progress.lock().unwrap().report.already_existed += 1;
-                }
-                _ => {
-                    let source_path = resource.source_path.clone();
-                    let current_index = PackageIndex::default();
-                    match process_resource(
-                        ctx,
-                        resource_type,
-                        resource,
-                        &current_index,
-                        pkg_name,
-                        bar,
-                        existing,
-                    )
-                    .await
-                    {
-                        Ok(result) => {
-                            processed_count += 1;
-                            current_progress
-                                .lock()
-                                .unwrap()
-                                .report
-                                .add_install_result(result);
-                        }
-                        Err(err) => {
-                            bar.suspend(|| {
-                                let msg = format!(
-                                    "Warning: could not process file {source_path:?}: {err:#}",
-                                );
-                                println!("{}", style(msg).yellow());
-                            });
-                            current_progress.lock().unwrap().report.errors += 1;
-                        }
+            Action::Install => {
+                let source_path = resource.source_path.clone();
+                let current_index = PackageIndex::default();
+                match process_resource(
+                    ctx,
+                    resource_type,
+                    resource,
+                    &current_index,
+                    pkg_name,
+                    bar,
+                    existing,
+                )
+                .await
+                {
+                    Ok(result) => {
+                        processed_count += 1;
+                        current_progress
+                            .lock()
+                            .unwrap()
+                            .report
+                            .add_install_result(result);
+                    }
+                    Err(err) => {
+                        bar.suspend(|| {
+                            let msg = format!(
+                                "Warning: could not process file {source_path:?}: {err:#}",
+                            );
+                            println!("{}", style(msg).yellow());
+                        });
+                        current_progress.lock().unwrap().report.errors += 1;
                     }
                 }
-            },
+            }
             Action::Uninstall => {
-                if let Some((id, _)) = existing {
-                    match ctx.fhir_client.delete(resource_type, &id).await {
+                if let Some(existing) = existing {
+                    match ctx.fhir_client.delete(resource_type, &existing.id).await {
                         Ok(()) => {
                             processed_count += 1;
                             current_progress.lock().unwrap().report.removed += 1;
@@ -180,7 +174,6 @@ async fn process_resources_type(
     processed_count
 }
 
-#[allow(clippy::too_many_arguments)]
 pub async fn process_resource(
     ctx: InstallContext<'_>,
     resource_type: &str,
@@ -188,8 +181,14 @@ pub async fn process_resource(
     current_index: &PackageIndex,
     current_package: &str,
     bar: &ProgressBar,
-    existing_resource: Option<(String, Value)>,
+    existing_resource: Option<ExistingResource>,
 ) -> Result<InstallResult, FhirError> {
+    if ctx.existing_resources_behaviour == ExistingResourceBehaviour::Skip
+        && existing_resource.is_some()
+    {
+        return Ok(InstallResult::Skipped);
+    }
+
     if !ctx.skip_preprocessing {
         preprocess_resource(
             &mut resource,
@@ -202,7 +201,12 @@ pub async fn process_resource(
         .await?;
     }
 
-    let result = if let Some((id, existing_data)) = existing_resource {
+    let result = if let Some(existing_resource) = existing_resource {
+        let ExistingResource {
+            id,
+            data: existing_data,
+        } = existing_resource;
+
         resource.set_id(id);
 
         if ctx.existing_resources_behaviour == ExistingResourceBehaviour::Overwrite
@@ -369,55 +373,49 @@ fn normalize_profile_reference(reference: &mut String, current_index: &PackageIn
     true
 }
 
-pub async fn check_package_installed(
-    package: &FhirPackage,
+pub async fn check_package_installed<'a>(
+    package_index: &'a PackageIndex,
     client: &FhirClient,
     total_progress: &ProgressBar,
     parallel_search_requests: usize,
-) -> anyhow::Result<PackageInstallStatus> {
-    let index = package.read_index()?;
-
+) -> anyhow::Result<PackageInstallStatus<'a>> {
     total_progress.reset();
-    total_progress.set_length(index.files.len() as u64);
+    total_progress.set_length(package_index.files.len() as u64);
     total_progress.set_message("Checking resources");
 
-    let requests = index.files.into_iter().map(|file| async {
-        let exists = find_installed_resource(client, &file.resource_info).await?;
+    let requests = package_index.files.iter().map(|file| async move {
+        let existing = find_installed_resource(client, &file.resource_info).await?;
 
         total_progress.inc(1);
 
-        anyhow::Ok((file, exists))
+        anyhow::Ok((file, existing))
     });
 
-    let missing = stream::iter(requests)
-        .buffer_unordered(parallel_search_requests)
-        .try_filter(|(_, id)| {
-            let missing = id.is_none();
-            async move { missing }
-        })
-        .map_ok(|(file, _)| file)
-        .try_collect::<Vec<_>>()
-        .await?;
+    let mut stream = stream::iter(requests).buffer_unordered(parallel_search_requests);
+
+    let mut resources = Vec::with_capacity(package_index.files.len());
+
+    while let Some((file, existing_resource)) = stream.try_next().await? {
+        resources.push((file, existing_resource));
+    }
 
     total_progress.reset();
 
-    if missing.is_empty() {
-        Ok(PackageInstallStatus::Installed)
-    } else {
-        Ok(PackageInstallStatus::NotInstalled(missing))
-    }
+    Ok(resources)
 }
 
-pub enum PackageInstallStatus {
-    Installed,
-    NotInstalled(Vec<PackageIndexFile>),
+pub type PackageInstallStatus<'a> = Vec<(&'a PackageIndexFile, Option<ExistingResource>)>;
+
+pub struct ExistingResource {
+    pub id: String,
+    pub data: Value,
 }
 
 /// Returns the ids of existing resources
 pub(super) async fn find_installed_resource(
     client: &FhirClient,
     resource_info: &ResourceInfo,
-) -> anyhow::Result<Option<(String, Value)>> {
+) -> anyhow::Result<Option<ExistingResource>> {
     let mut search_params: Vec<(&str, &str)> = vec![];
     if let Some(url) = &resource_info.url {
         search_params.push(("url", url));
@@ -438,10 +436,10 @@ pub(super) async fn find_installed_resource(
         .entry
         .into_iter()
         .filter_map(|entry| entry.resource)
-        .find_map(|resource| {
-            let url = resource.get("url").and_then(Value::as_str);
-            let version = resource.get("version").and_then(Value::as_str);
-            let id = resource
+        .find_map(|data| {
+            let url = data.get("url").and_then(Value::as_str);
+            let version = data.get("version").and_then(Value::as_str);
+            let id = data
                 .get("id")
                 .and_then(Value::as_str)
                 .expect("Server returned resource without a valid id")
@@ -453,7 +451,7 @@ pub(super) async fn find_installed_resource(
                 || (resource_info.url.is_none() && id == resource_info.id);
 
             if matches {
-                Some((id, resource))
+                Some(ExistingResource { id, data })
             } else {
                 None
             }
