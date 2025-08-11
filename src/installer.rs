@@ -34,8 +34,8 @@ use serde_json::Value;
 use serde_with::skip_serializing_none;
 use std::{
     collections::HashMap,
-    fs,
-    io::Write,
+    fs::{self, File},
+    io::{BufWriter, Write},
     path::{Path, PathBuf},
     sync::{Arc, Mutex},
     time::Instant,
@@ -267,6 +267,9 @@ async fn uninstall_package<'a>(
 
     bar.reset();
 
+    let full_name = format!("{}@{}", manifest.name, manifest.version);
+    let mut errors_writer = ErrorsWriter::from_ctx(ctx, &full_name)?;
+
     println!("Found {} resources to remove", style(existing.len()).bold());
 
     for (file, id) in existing {
@@ -286,10 +289,9 @@ async fn uninstall_package<'a>(
             }
             Err(error) => {
                 let file_path = file.get_path();
-                let full_name = format!("{}@{}", manifest.name, manifest.version);
 
                 log_resource_error(
-                    ctx,
+                    &mut errors_writer,
                     error,
                     &file_path,
                     &full_name,
@@ -310,6 +312,10 @@ async fn uninstall_package<'a>(
         bar.inc(1);
     }
     current_progress.lock().unwrap().state = InstallState::Completed;
+
+    if let ErrorsWriter::File(mut file) = errors_writer {
+        file.flush()?;
+    }
 
     Ok(())
 }
@@ -341,6 +347,9 @@ async fn process_package_files(
     current_progress: &Mutex<InstallProgress>,
     // progress: &MultiProgress,
 ) -> anyhow::Result<()> {
+    let full_name = format!("{}@{}", manifest.name, manifest.version);
+    let mut errors_writer = ErrorsWriter::from_ctx(ctx, &full_name)?;
+
     for (file, existing_resource) in files {
         bar.set_message(format!(
             "{} {} {}",
@@ -375,7 +384,6 @@ async fn process_package_files(
 
         let resource_info = resource.info.clone();
 
-        let full_name = format!("{}@{}", manifest.name, manifest.version);
         match processor::process_resource(
             ctx,
             &file.resource_info.resource_type,
@@ -398,7 +406,7 @@ async fn process_package_files(
                 let path: PathBuf = file_path.components().skip(1).collect();
 
                 log_resource_error(
-                    ctx,
+                    &mut errors_writer,
                     error,
                     &file_path,
                     &full_name,
@@ -415,6 +423,10 @@ async fn process_package_files(
             }
         }
         bar.inc(1);
+    }
+
+    if let ErrorsWriter::File(mut file) = errors_writer {
+        file.flush()?;
     }
 
     Ok(())
@@ -446,6 +458,8 @@ pub async fn process_directory(ctx: InstallContext<'_>, root_path: &Path) -> any
         .insert(pkg_name.clone(), current_progress.clone());
 
     let bar = ProgressBar::new_spinner().with_message("Loading data");
+
+    let mut errors_writer = ErrorsWriter::from_ctx(ctx, &pkg_name)?;
 
     if root_path.join("package.json").exists() {
         let full_path = fs::canonicalize(&root_path).context("Could not resolve directory")?;
@@ -487,7 +501,7 @@ pub async fn process_directory(ctx: InstallContext<'_>, root_path: &Path) -> any
 
             if let Err(error) = load_file(&mut resources, &file_path, relative_path) {
                 log_resource_error(
-                    ctx,
+                    &mut errors_writer,
                     FhirError::Other(error),
                     &file_path,
                     &pkg_name,
@@ -517,6 +531,10 @@ pub async fn process_directory(ctx: InstallContext<'_>, root_path: &Path) -> any
                 "Check {} for full error info",
                 package_log_file(&dir, &pkg_name, ctx.start_time).display(),
             );
+        }
+
+        if let ErrorsWriter::File(mut file) = errors_writer {
+            file.flush()?;
         }
 
         Ok(())
@@ -966,16 +984,37 @@ pub fn print_report(ctx: InstallContext<'_>, primary_package: &str) {
     }
 }
 
+enum ErrorsWriter {
+    File(BufWriter<File>),
+    Stderr,
+}
+
+impl ErrorsWriter {
+    fn from_ctx(ctx: InstallContext<'_>, pkg_name: &str) -> anyhow::Result<Self> {
+        if let Some(logs_dir) = ctx.errors_output.get_dir() {
+            let path = package_log_file(&logs_dir, pkg_name, ctx.start_time);
+            let file = std::fs::OpenOptions::new()
+                .append(true)
+                .create(true)
+                .open(path)?;
+
+            Ok(ErrorsWriter::File(BufWriter::new(file)))
+        } else {
+            Ok(ErrorsWriter::Stderr)
+        }
+    }
+}
+
 fn log_resource_error(
-    ctx: InstallContext<'_>,
+    writer: &mut ErrorsWriter,
     error: FhirError,
     file_path: &Path,
     pkg_name: &str,
     bar: &ProgressBar,
     resource_info: Option<&ResourceInfo>,
 ) {
-    match ctx.errors_output {
-        LogsOutput::Stderr => bar.suspend(|| {
+    match writer {
+        ErrorsWriter::Stderr => bar.suspend(|| {
             eprintln!(
                 "{}: could not process file {} in package {}: {error}",
                 style("Warning").yellow(),
@@ -983,60 +1022,43 @@ fn log_resource_error(
                 style(&pkg_name).bold(),
             )
         }),
-        LogsOutput::Directory | LogsOutput::Custom(_) => {
-            let logs_dir = ctx.errors_output.get_dir().unwrap();
-            // TODO: keep the file open with buffered writes
-            let path = package_log_file(&logs_dir, pkg_name, ctx.start_time);
-            match std::fs::OpenOptions::new()
-                .append(true)
-                .create(true)
-                .open(path)
-            {
-                Ok(mut file) => {
-                    let mut msg = JsonLogMessage {
-                        package: pkg_name,
-                        file: file_path,
-                        error: None,
-                        status_code: None,
-                        outcome: None,
-                        url: None,
-                        version: None,
-                        id: None,
-                    };
+        ErrorsWriter::File(file) => {
+            let mut msg = JsonLogMessage {
+                package: pkg_name,
+                file: file_path,
+                error: None,
+                status_code: None,
+                outcome: None,
+                url: None,
+                version: None,
+                id: None,
+            };
 
-                    match &error {
-                        FhirError::Outcome {
-                            status,
-                            outcome,
-                            url,
-                        } => {
-                            msg.status_code = Some(status.as_u16());
-                            msg.outcome = Some(outcome);
-                            msg.url = Some(url.as_str());
-                        }
-                        FhirError::Other(_) => {
-                            msg.error = Some(strip_ansi_codes(&error.to_string()).into_owned());
-                        }
-                    }
-
-                    if let Some(info) = resource_info {
-                        msg.id = Some(&info.id);
-                        msg.url = info.url.as_deref().or(msg.url);
-                        msg.version = info.version.as_deref();
-                    }
-
-                    let log_contents = serde_json::to_string(&msg).unwrap();
-
-                    if let Err(err) = writeln!(file, "{}", log_contents) {
-                        eprintln!("Could not write log to file: {err}");
-                    }
+            match &error {
+                FhirError::Outcome {
+                    status,
+                    outcome,
+                    url,
+                } => {
+                    msg.status_code = Some(status.as_u16());
+                    msg.outcome = Some(outcome);
+                    msg.url = Some(url.as_str());
                 }
-                Err(err) => {
-                    eprintln!(
-                        "{} could not open logs file for writing: {err}",
-                        style("Error:").red()
-                    );
+                FhirError::Other(_) => {
+                    msg.error = Some(strip_ansi_codes(&error.to_string()).into_owned());
                 }
+            }
+
+            if let Some(info) = resource_info {
+                msg.id = Some(&info.id);
+                msg.url = info.url.as_deref().or(msg.url);
+                msg.version = info.version.as_deref();
+            }
+
+            let log_contents = serde_json::to_string(&msg).unwrap();
+
+            if let Err(err) = writeln!(file, "{}", log_contents) {
+                eprintln!("Could not write log to file: {err}");
             }
         }
     }
