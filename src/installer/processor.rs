@@ -1,12 +1,13 @@
 use super::{
     package::{PackageIndex, PackageIndexFile},
     resource::{Resource, ResourceInfo},
-    Action, InstallContext,
+    Action, PackageContext,
 };
 use crate::{
-    args::ExistingResourceBehaviour,
+    args::{ExistingResourceBehaviour, InstallType},
     client::{FhirClient, FhirError},
     installer::{
+        print_check_status,
         progress::{InstallProgress, InstallState},
         resource::is_resource_changed,
     },
@@ -29,7 +30,7 @@ const RESOURCE_TYPES_ORDER: &[&str] = &[
 ];
 
 pub async fn process_directory_resources(
-    ctx: InstallContext<'_>,
+    ctx: &PackageContext<'_>,
     mut resources: IndexMap<String, Vec<Resource>>,
     current_progress: &Mutex<InstallProgress>,
     name: &str,
@@ -42,37 +43,80 @@ pub async fn process_directory_resources(
     bar.set_style(ProgressStyle::with_template("{spinner} [{pos}/{len}] {msg}").unwrap());
 
     let mut processed_count = 0;
+    let mut missing_resources = Vec::new();
 
     // First we process resources in the defined order
     for resource_type in RESOURCE_TYPES_ORDER {
         if let Some(resources) = resources.shift_remove(*resource_type) {
-            processed_count +=
-                process_resources_type(ctx, resource_type, resources, &bar, current_progress, name)
-                    .await;
+            processed_count += process_resources_type(
+                ctx,
+                resource_type,
+                resources,
+                &bar,
+                current_progress,
+                name,
+                &mut missing_resources,
+            )
+            .await;
         }
     }
 
     // Process remaining resource types which were not in the list
     for (resource_type, resources) in resources.into_iter() {
-        processed_count +=
-            process_resources_type(ctx, &resource_type, resources, &bar, current_progress, name)
-                .await;
+        processed_count += process_resources_type(
+            ctx,
+            &resource_type,
+            resources,
+            &bar,
+            current_progress,
+            name,
+            &mut missing_resources,
+        )
+        .await;
     }
 
     current_progress.lock().unwrap().state = InstallState::Completed;
     bar.finish_and_clear();
+
+    if ctx.action == Action::Check {
+        let mut grouped_resources: IndexMap<&str, Vec<_>> = IndexMap::new();
+        for resource in &missing_resources {
+            grouped_resources
+                .entry(&resource.info.resource_type)
+                .or_default()
+                .push((
+                    &resource.info,
+                    resource
+                        .source_path
+                        .file_name()
+                        .and_then(|name| name.to_str())
+                        .unwrap_or("<Invalid filename>"),
+                ));
+        }
+
+        let existing = current_progress.lock().unwrap().report.already_existed;
+
+        print_check_status(
+            name,
+            existing,
+            processed_count,
+            InstallType::Directory,
+            &grouped_resources,
+        );
+    }
 
     processed_count
 }
 
 /// Returns the number of resources which were successfully uploaded
 async fn process_resources_type(
-    ctx: InstallContext<'_>,
+    ctx: &PackageContext<'_>,
     resource_type: &str,
     resources: Vec<Resource>,
     bar: &ProgressBar,
     current_progress: &Mutex<InstallProgress>,
     pkg_name: &str,
+    missing_resources: &mut Vec<Resource>,
 ) -> usize {
     bar.reset();
     bar.set_length(resources.len() as u64);
@@ -144,27 +188,37 @@ async fn process_resources_type(
                     }
                 }
             }
-            Action::Uninstall => {
-                if let Some(existing) = existing {
-                    match ctx.fhir_client.delete(resource_type, &existing.id).await {
-                        Ok(()) => {
-                            processed_count += 1;
-                            current_progress.lock().unwrap().report.removed += 1;
-                        }
-                        Err(err) => {
-                            bar.suspend(|| {
-                                    let msg = format!(
-                                        "Warning: could not delete resource {resource_type}/{}: {err:#}",
-                                        resource.info.id
-                                    );
-                                    println!("{}", style(msg).yellow());
-                                });
-                            current_progress.lock().unwrap().report.errors += 1;
-                        }
+            Action::Uninstall => match existing {
+                Some(existing) => match ctx.fhir_client.delete(resource_type, &existing.id).await {
+                    Ok(()) => {
+                        processed_count += 1;
+                        current_progress.lock().unwrap().report.removed += 1;
                     }
-                } else {
+                    Err(err) => {
+                        bar.suspend(|| {
+                            let msg = format!(
+                                "Warning: could not delete resource {resource_type}/{}: {err:#}",
+                                resource.info.id
+                            );
+                            println!("{}", style(msg).yellow());
+                        });
+                        current_progress.lock().unwrap().report.errors += 1;
+                    }
+                },
+                None => {
                     processed_count += 1;
                 }
+            },
+            Action::Check => {
+                match existing {
+                    Some(_) => {
+                        current_progress.lock().unwrap().report.already_existed += 1;
+                    }
+                    None => {
+                        missing_resources.push(resource);
+                    }
+                }
+                processed_count += 1;
             }
         }
 
@@ -175,7 +229,7 @@ async fn process_resources_type(
 }
 
 pub async fn process_resource(
-    ctx: InstallContext<'_>,
+    ctx: &PackageContext<'_>,
     resource_type: &str,
     mut resource: Resource,
     current_index: &PackageIndex,

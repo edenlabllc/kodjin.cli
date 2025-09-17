@@ -2,14 +2,19 @@ use crate::{
     args::{Args, InstallType, LogsOutput, PackageCommand, ServerCommand},
     client::FhirClient,
     config::{Config, ServerConfig},
-    installer::{self, InstallContext},
+    installer::{self, Action, PackageContext},
     print_values_table,
     registry::RegistryClient,
 };
 use anyhow::bail;
 use console::style;
 use indicatif::{MultiProgress, ProgressBar};
-use std::{collections::HashMap, path::PathBuf, sync::Mutex, time::Duration};
+use std::{
+    collections::HashMap,
+    path::PathBuf,
+    sync::{Arc, Mutex},
+    time::Duration,
+};
 use tokio::sync::Semaphore;
 
 pub async fn server(cmd: ServerCommand, mut config: Config, args: &Args) -> anyhow::Result<()> {
@@ -158,37 +163,24 @@ pub async fn install(
     client: FhirClient,
     errors_output: LogsOutput,
 ) -> anyhow::Result<()> {
-    let multi_progress = MultiProgress::new();
-    let semaphore = Semaphore::new(5);
-
-    let packages = Mutex::new(HashMap::new());
-    let registry_client = RegistryClient::new(cmd.registry);
-
-    let ctx = InstallContext {
-        fhir_client: &client,
-        action: installer::Action::Install,
-        progress: &multi_progress,
-        packages_progress: &packages,
-        semaphore: &semaphore,
-        registry_client: &registry_client,
-        skip_preprocessing: cmd.skip_preprocessing,
-        skip_strict_reference_versions: cmd.skip_strict_reference_versions,
-        skip_dependencies: cmd.skip_dependencies,
-        parallel_search_requests: cmd.parallel_search_requests,
-        existing_resources_behaviour: cmd.existing_resources,
-        errors_output: &errors_output,
-        start_time: chrono::Local::now(),
-    };
+    let registry_client = RegistryClient::new(cmd.registry.clone());
+    let ctx = install_ctx(
+        &cmd,
+        Action::Install,
+        &client,
+        &registry_client,
+        &errors_output,
+    );
 
     match cmd.r#type {
         InstallType::Package => {
-            installer::install_package_by_name(ctx, cmd.name.clone()).await?;
+            installer::process_package_by_name(&ctx, cmd.name.clone()).await?;
         }
         InstallType::Directory => {
-            installer::process_directory(ctx, &PathBuf::from(cmd.name.clone())).await?;
+            installer::process_directory(&ctx, &PathBuf::from(cmd.name.clone())).await?;
         }
     }
-    installer::print_report(ctx, &cmd.name);
+    installer::print_report(&ctx, &cmd.name);
 
     Ok(())
 }
@@ -198,60 +190,81 @@ pub async fn uninstall(
     client: FhirClient,
     errors_output: LogsOutput,
 ) -> anyhow::Result<()> {
+    let registry_client = RegistryClient::new(cmd.registry.clone());
+    let ctx = install_ctx(
+        &cmd,
+        Action::Uninstall,
+        &client,
+        &registry_client,
+        &errors_output,
+    );
+
+    match cmd.r#type {
+        InstallType::Package => {
+            installer::process_package_by_name(&ctx, cmd.name.clone()).await?;
+        }
+        InstallType::Directory => {
+            installer::process_directory(&ctx, &PathBuf::from(cmd.name.clone())).await?;
+        }
+    }
+    installer::print_report(&ctx, &cmd.name);
+
+    Ok(())
+}
+
+pub async fn check(
+    cmd: PackageCommand,
+    client: FhirClient,
+    errors_output: LogsOutput,
+) -> anyhow::Result<()> {
+    let registry_client = RegistryClient::new(cmd.registry.clone());
+    let ctx = install_ctx(
+        &cmd,
+        Action::Check,
+        &client,
+        &registry_client,
+        &errors_output,
+    );
+
+    match cmd.r#type {
+        InstallType::Package => {
+            installer::process_package_by_name(&ctx, cmd.name).await?;
+        }
+        InstallType::Directory => {
+            installer::process_directory(&ctx, &PathBuf::from(cmd.name.clone())).await?;
+        }
+    }
+
+    Ok(())
+}
+
+fn install_ctx<'a>(
+    cmd: &PackageCommand,
+    action: Action,
+    fhir_client: &'a FhirClient,
+    registry_client: &'a RegistryClient,
+    errors_output: &'a LogsOutput,
+) -> PackageContext<'a> {
     let multi_progress = MultiProgress::new();
     let semaphore = Semaphore::new(5);
 
     let packages = Mutex::new(HashMap::new());
-    let registry_client = RegistryClient::new(cmd.registry);
 
-    let ctx = InstallContext {
-        fhir_client: &client,
-        action: installer::Action::Uninstall,
-        progress: &multi_progress,
-        packages_progress: &packages,
-        semaphore: &semaphore,
-        registry_client: &registry_client,
+    PackageContext {
+        fhir_client,
+        action,
+        progress: multi_progress,
+        packages_progress: Arc::new(packages),
+        semaphore: Arc::new(semaphore),
+        registry_client,
         skip_preprocessing: cmd.skip_preprocessing,
         skip_strict_reference_versions: cmd.skip_strict_reference_versions,
         skip_dependencies: cmd.skip_dependencies,
         existing_resources_behaviour: cmd.existing_resources,
         parallel_search_requests: cmd.parallel_search_requests,
-        errors_output: &errors_output,
+        errors_output,
         start_time: chrono::Local::now(),
-    };
-
-    match cmd.r#type {
-        InstallType::Package => {
-            installer::install_package_by_name(ctx, cmd.name.clone()).await?;
-        }
-        InstallType::Directory => {
-            installer::process_directory(ctx, &PathBuf::from(cmd.name.clone())).await?;
-        }
     }
-    installer::print_report(ctx, &cmd.name);
-
-    Ok(())
-}
-
-pub async fn check(cmd: PackageCommand, client: FhirClient) -> anyhow::Result<()> {
-    let registry_client = RegistryClient::new(cmd.registry);
-
-    match cmd.r#type {
-        InstallType::Package => {
-            installer::check_package_installed(
-                &client,
-                &registry_client,
-                &cmd.name,
-                cmd.parallel_search_requests,
-            )
-            .await?;
-        }
-        InstallType::Directory => {
-            todo!()
-        }
-    }
-
-    Ok(())
 }
 
 pub async fn tree(cmd: PackageCommand) -> anyhow::Result<()> {

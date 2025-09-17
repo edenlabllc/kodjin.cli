@@ -1,7 +1,7 @@
 use clap::{Parser, Subcommand, ValueEnum};
 use clap_complete::Shell;
 use std::{convert::Infallible, fmt, path::PathBuf, str::FromStr};
-
+use strum::Display;
 use crate::storage::logs_dir;
 
 /// Kodjin management CLI
@@ -155,7 +155,7 @@ pub enum ExistingResourceBehaviour {
     Overwrite,
 }
 
-#[derive(Clone, Copy, Debug, Default, ValueEnum)]
+#[derive(Clone, Copy, Debug, Default, ValueEnum, Display)]
 pub enum InstallType {
     /// FHIR Package from a registry
     #[default]

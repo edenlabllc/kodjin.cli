@@ -58,6 +58,14 @@ impl InstallReport {
                     style(errors).bold(),
                 )
             }
+            installer::Action::Check => {
+                format!(
+                    "{} resources processed, {} already existed, {} errors",
+                    style(total).bold(),
+                    style(already_existed).bold(),
+                    style(errors).bold(),
+                )
+            }
         }
     }
 }
