@@ -107,8 +107,9 @@ pub struct GenerateCompletions {
 
 #[derive(Parser, Clone, Debug)]
 pub struct PackageCommand {
-    /// Item to process
-    pub name: String,
+    /// Items to process
+    #[clap(required = true)]
+    pub name: Vec<String>,
     /// Type of the item
     #[clap(value_enum, short, long, default_value_t)]
     pub r#type: InstallType,

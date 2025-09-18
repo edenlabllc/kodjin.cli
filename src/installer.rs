@@ -6,6 +6,7 @@ mod report;
 mod resource;
 
 const BASE_PACKAGE: &str = "hl7.fhir.r4.core";
+pub const PLACEHOLDER_PACKAGE_NAME: &str = "local";
 
 use crate::{
     args::{ExistingResourceBehaviour, InstallType, LogsOutput},
@@ -78,13 +79,13 @@ impl Action {
 
 pub async fn process_package_by_name(
     ctx: &PackageContext<'_>,
-    package_name: String,
+    package_name: &str,
 ) -> anyhow::Result<()> {
     let maybe_result_rx = ctx
         .packages_progress
         .lock()
         .unwrap()
-        .get(&package_name)
+        .get(package_name)
         .and_then(|status| match &status.lock().unwrap().state {
             InstallState::InProgress(rx) => Some(rx.clone()),
             _ => None,
@@ -99,18 +100,18 @@ pub async fn process_package_by_name(
     let install_progress = Arc::new(Mutex::new(InstallProgress {
         state: InstallState::InProgress(result_rx),
         report: InstallReport::default(),
-        full_name: package_name.clone(), // Placeholder name until it gets replaced with something that's guarnateed to have version info
+        full_name: package_name.to_owned(), // Placeholder name until it gets replaced with something that's guarnateed to have version info
         errors: vec![],
     }));
 
     ctx.packages_progress
         .lock()
         .unwrap()
-        .insert(package_name.clone(), install_progress.clone());
+        .insert(package_name.to_owned(), install_progress.clone());
 
     let _permit = ctx.semaphore.acquire();
 
-    let package_req = PackageReq::from_str(&package_name).context("Invalid package request")?;
+    let package_req = PackageReq::from_str(package_name).context("Invalid package request")?;
 
     // Assume the base package is always installed
     if package_req.name == BASE_PACKAGE {
@@ -185,7 +186,7 @@ async fn install_package<'a>(
                     existing_resources_behaviour: ExistingResourceBehaviour::Skip,
                     ..ctx.clone()
                 };
-                process_package_by_name(&dependency_ctx, package).await
+                process_package_by_name(&dependency_ctx, &package).await
             });
 
         try_join_all(dependency_tasks).await?;
@@ -556,26 +557,24 @@ pub async fn process_directory(ctx: &PackageContext<'_>, root_path: &Path) -> an
     }
 }
 
-pub async fn process_file(ctx: &PackageContext<'_>, file_path: &Path) -> anyhow::Result<()> {
+pub async fn process_file(ctx: &PackageContext<'_>, files: &[String]) -> anyhow::Result<()> {
     let bar = ProgressBar::new_spinner().with_message("Loading data");
-    let file_name = file_path
-        .file_name()
-        .context("File has no name")?
-        .to_str()
-        .context("File has an invalid name")?;
 
-    let mut errors_writer = ErrorsWriter::from_ctx(ctx, file_name)?;
+    let mut errors_writer = ErrorsWriter::from_ctx(ctx, PLACEHOLDER_PACKAGE_NAME)?;
 
     let mut resources = IndexMap::new();
-    if let Err(error) = load_file(&mut resources, file_path, file_path) {
-        log_resource_error(
-            &mut errors_writer,
-            FhirError::Other(error),
-            file_path,
-            file_name,
-            &bar,
-            None,
-        );
+    for file_path in files {
+        let path = Path::new(file_path);
+        if let Err(error) = load_file(&mut resources, path, path) {
+            log_resource_error(
+                &mut errors_writer,
+                FhirError::Other(error),
+                path,
+                PLACEHOLDER_PACKAGE_NAME,
+                &bar,
+                None,
+            );
+        }
     }
 
     bar.finish_and_clear();
@@ -585,20 +584,26 @@ pub async fn process_file(ctx: &PackageContext<'_>, file_path: &Path) -> anyhow:
         state: InstallState::InProgress(rx),
         report: InstallReport::default(),
         errors: vec![],
-        full_name: file_name.to_owned(),
+        full_name: PLACEHOLDER_PACKAGE_NAME.to_owned(),
     }));
 
     ctx.packages_progress.lock().unwrap().insert(
-        file_path.to_str().context("Invalid path")?.to_owned(),
+        PLACEHOLDER_PACKAGE_NAME.to_owned(),
         current_progress.clone(),
     );
 
-    processor::process_directory_resources(ctx, resources, &current_progress, file_name).await;
+    processor::process_directory_resources(
+        ctx,
+        resources,
+        &current_progress,
+        PLACEHOLDER_PACKAGE_NAME,
+    )
+    .await;
 
     if let Some(dir) = ctx.errors_output.get_dir() {
         println!(
             "Check {} for full error info",
-            package_log_file(&dir, file_name, ctx.start_time).display(),
+            package_log_file(&dir, PLACEHOLDER_PACKAGE_NAME, ctx.start_time).display(),
         );
     }
 

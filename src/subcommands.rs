@@ -2,7 +2,7 @@ use crate::{
     args::{Args, InstallType, LogsOutput, PackageCommand, ServerCommand},
     client::FhirClient,
     config::{Config, ServerConfig},
-    installer::{self, Action, PackageContext},
+    installer::{self, Action, PackageContext, PLACEHOLDER_PACKAGE_NAME},
     print_values_table,
     registry::RegistryClient,
 };
@@ -172,18 +172,27 @@ pub async fn install(
         &errors_output,
     );
 
-    match cmd.r#type {
+    let name = match cmd.r#type {
         InstallType::Package => {
-            installer::process_package_by_name(&ctx, cmd.name.clone()).await?;
+            let [name] = cmd.name.as_slice() else {
+                bail!("Only one package may be supplied at a time");
+            };
+            installer::process_package_by_name(&ctx, name).await?;
+            name
         }
         InstallType::Directory => {
-            installer::process_directory(&ctx, &PathBuf::from(cmd.name.clone())).await?;
+            let [name] = cmd.name.as_slice() else {
+                bail!("Only one directory may be supplied at a time");
+            };
+            installer::process_directory(&ctx, &PathBuf::from(&name)).await?;
+            name
         }
         InstallType::File => {
-            installer::process_file(&ctx, &PathBuf::from(cmd.name.clone())).await?;
+            installer::process_file(&ctx, &cmd.name).await?;
+            PLACEHOLDER_PACKAGE_NAME
         }
-    }
-    installer::print_report(&ctx, &cmd.name);
+    };
+    installer::print_report(&ctx, name);
 
     Ok(())
 }
@@ -202,18 +211,27 @@ pub async fn uninstall(
         &errors_output,
     );
 
-    match cmd.r#type {
+    let name = match cmd.r#type {
         InstallType::Package => {
-            installer::process_package_by_name(&ctx, cmd.name.clone()).await?;
+            let [name] = cmd.name.as_slice() else {
+                bail!("Only one package may be supplied at a time");
+            };
+            installer::process_package_by_name(&ctx, name).await?;
+            name
         }
         InstallType::Directory => {
-            installer::process_directory(&ctx, &PathBuf::from(cmd.name.clone())).await?;
+            let [name] = cmd.name.as_slice() else {
+                bail!("Only one directory may be supplied at a time");
+            };
+            installer::process_directory(&ctx, &PathBuf::from(name)).await?;
+            name
         }
         InstallType::File => {
-            installer::process_file(&ctx, &PathBuf::from(cmd.name.clone())).await?;
+            installer::process_file(&ctx, &cmd.name).await?;
+            PLACEHOLDER_PACKAGE_NAME
         }
-    }
-    installer::print_report(&ctx, &cmd.name);
+    };
+    installer::print_report(&ctx, name);
 
     Ok(())
 }
@@ -234,13 +252,19 @@ pub async fn check(
 
     match cmd.r#type {
         InstallType::Package => {
-            installer::process_package_by_name(&ctx, cmd.name).await?;
+            let [name] = cmd.name.as_slice() else {
+                bail!("Only one package may be supplied at a time");
+            };
+            installer::process_package_by_name(&ctx, name).await?;
         }
         InstallType::Directory => {
-            installer::process_directory(&ctx, &PathBuf::from(cmd.name.clone())).await?;
+            let [name] = cmd.name.as_slice() else {
+                bail!("Only one directory may be supplied at a time");
+            };
+            installer::process_directory(&ctx, &PathBuf::from(name)).await?;
         }
         InstallType::File => {
-            installer::process_file(&ctx, &PathBuf::from(cmd.name.clone())).await?;
+            installer::process_file(&ctx, &cmd.name).await?;
         }
     }
 
@@ -279,8 +303,11 @@ fn install_ctx<'a>(
 pub async fn tree(cmd: PackageCommand) -> anyhow::Result<()> {
     match cmd.r#type {
         InstallType::Package => {
+            let [name] = cmd.name.as_slice() else {
+                bail!("Only one package may be supplied at a time");
+            };
             let registry_client = RegistryClient::new(cmd.registry);
-            installer::print_tree(&registry_client, &cmd.name, 0).await?;
+            installer::print_tree(&registry_client, name, 0).await?;
         }
         InstallType::Directory => {
             todo!()
@@ -292,8 +319,11 @@ pub async fn tree(cmd: PackageCommand) -> anyhow::Result<()> {
 }
 
 pub async fn info(cmd: PackageCommand) -> anyhow::Result<()> {
+    let [name] = cmd.name.as_slice() else {
+        bail!("Only one package may be supplied at a time");
+    };
     let registry_client = RegistryClient::new(cmd.registry);
-    installer::info(&registry_client, &cmd.name).await
+    installer::info(&registry_client, name).await
 }
 
 pub async fn download(
@@ -301,10 +331,14 @@ pub async fn download(
     client: FhirClient,
     preprocess: bool,
 ) -> anyhow::Result<()> {
+    let [name] = cmd.name.as_slice() else {
+        bail!("Only one package may be supplied at a time");
+    };
+
     let registry_client = RegistryClient::new(cmd.registry);
     installer::download(
         &registry_client,
-        &cmd.name,
+        name,
         client,
         cmd.skip_strict_reference_versions,
         preprocess,
