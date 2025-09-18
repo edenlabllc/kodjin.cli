@@ -1,8 +1,8 @@
+use crate::storage::logs_dir;
 use clap::{Parser, Subcommand, ValueEnum};
 use clap_complete::Shell;
 use std::{convert::Infallible, fmt, path::PathBuf, str::FromStr};
 use strum::Display;
-use crate::storage::logs_dir;
 
 /// Kodjin management CLI
 ///
@@ -163,6 +163,8 @@ pub enum InstallType {
     /// Local directory
     #[value(alias("local"), alias("dir"))]
     Directory,
+    /// Single local file
+    File,
 }
 
 #[derive(Clone, Debug, Default)]

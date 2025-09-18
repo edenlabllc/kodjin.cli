@@ -179,6 +179,9 @@ pub async fn install(
         InstallType::Directory => {
             installer::process_directory(&ctx, &PathBuf::from(cmd.name.clone())).await?;
         }
+        InstallType::File => {
+            installer::process_file(&ctx, &PathBuf::from(cmd.name.clone())).await?;
+        }
     }
     installer::print_report(&ctx, &cmd.name);
 
@@ -206,6 +209,9 @@ pub async fn uninstall(
         InstallType::Directory => {
             installer::process_directory(&ctx, &PathBuf::from(cmd.name.clone())).await?;
         }
+        InstallType::File => {
+            installer::process_file(&ctx, &PathBuf::from(cmd.name.clone())).await?;
+        }
     }
     installer::print_report(&ctx, &cmd.name);
 
@@ -232,6 +238,9 @@ pub async fn check(
         }
         InstallType::Directory => {
             installer::process_directory(&ctx, &PathBuf::from(cmd.name.clone())).await?;
+        }
+        InstallType::File => {
+            installer::process_file(&ctx, &PathBuf::from(cmd.name.clone())).await?;
         }
     }
 
@@ -276,6 +285,7 @@ pub async fn tree(cmd: PackageCommand) -> anyhow::Result<()> {
         InstallType::Directory => {
             todo!()
         }
+        InstallType::File => bail!("Doesn't make sense with a single file"),
     }
 
     Ok(())

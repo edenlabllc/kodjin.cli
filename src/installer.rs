@@ -556,6 +556,59 @@ pub async fn process_directory(ctx: &PackageContext<'_>, root_path: &Path) -> an
     }
 }
 
+pub async fn process_file(ctx: &PackageContext<'_>, file_path: &Path) -> anyhow::Result<()> {
+    let bar = ProgressBar::new_spinner().with_message("Loading data");
+    let file_name = file_path
+        .file_name()
+        .context("File has no name")?
+        .to_str()
+        .context("File has an invalid name")?;
+
+    let mut errors_writer = ErrorsWriter::from_ctx(ctx, file_name)?;
+
+    let mut resources = IndexMap::new();
+    if let Err(error) = load_file(&mut resources, file_path, file_path) {
+        log_resource_error(
+            &mut errors_writer,
+            FhirError::Other(error),
+            file_path,
+            file_name,
+            &bar,
+            None,
+        );
+    }
+
+    bar.finish_and_clear();
+
+    let (_tx, rx) = watch::channel(());
+    let current_progress = Arc::new(Mutex::new(InstallProgress {
+        state: InstallState::InProgress(rx),
+        report: InstallReport::default(),
+        errors: vec![],
+        full_name: file_name.to_owned(),
+    }));
+
+    ctx.packages_progress.lock().unwrap().insert(
+        file_path.to_str().context("Invalid path")?.to_owned(),
+        current_progress.clone(),
+    );
+
+    processor::process_directory_resources(ctx, resources, &current_progress, file_name).await;
+
+    if let Some(dir) = ctx.errors_output.get_dir() {
+        println!(
+            "Check {} for full error info",
+            package_log_file(&dir, file_name, ctx.start_time).display(),
+        );
+    }
+
+    if let ErrorsWriter::File(mut file) = errors_writer {
+        file.flush()?;
+    }
+
+    Ok(())
+}
+
 fn load_file(
     resources: &mut IndexMap<String, Vec<Resource>>,
     path: &Path,
