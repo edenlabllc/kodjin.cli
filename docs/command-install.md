@@ -33,7 +33,9 @@ Available Options:
     - This is the default behavior, so it does not need to be explicitly specified.  
 - `directory` - retrieves FHIR package from the specified directory. 
     - The `.` could be used to install package from the current directory.
-
+- `file` - installs only specific files from a package or directory instead of the entire package.
+    - Multiple files can be specified separated by spaces.
+    - Useful when you only need certain conformance resources rather than the full package.
 
 **Examples:**
 
@@ -52,11 +54,17 @@ In this example we will install the package from the current directory.
 kodjin-cli install --type directory .
 ```
 
+Install specific files from a package
+```shell
+kodjin-cli install --type file StructureDefinition-Patient.json ValueSet-Gender.json
+```
+
 Notes
 
 - If no `--type` option is provided, `package` is used by default.
 - Installing from a directory is useful when working with modified or custom packages.
 - Ensure that the directory contains a valid FHIR package structure.
+- The file option allows selective installation of specific FHIR resources without downloading the entire package. When using --type file, multiple filenames can be provided separated by spaces.
 
 ## --registry
 
@@ -91,12 +99,13 @@ Defines how kodjin-cli should handle resources that already exist on the FHIR se
 
 **Usage:**
 ```shell
-kodjin-cli install <NAME> --existing-resources <skip|overwrite>
+kodjin-cli install <NAME> --existing-resources <skip|sync|overwrite>
 ```
 
 Possible values:
 
 - `skip` - When using skip, kodjin-cli will skip resources that are already installed on the server. Is a dedault value.
+- `sync` - Update existing resources if they are different from what's being installed
 - `overwrite` - When using overwrite kodjin-cli will update resources, if they are already exist on the server
 
 **Examples:**
@@ -106,10 +115,16 @@ Install a package and overwrite existing resources
 $ kodjin-cli install hl7.fhir.us.core@4.0.0 --existing-resources overwrite
 ```
 
+Install a package and sync existing resources
+```shell
+$ kodjin-cli install hl7.fhir.us.core@4.0.0 --existing-resources sync
+```
+
 Notes
 
 - `skip` is default value, so it does not need to be explicitly specified when running the command.
 - The `overwrite` option should be used cautiously, especially in production environments, as it will replace existing resources.
+- The `sync` option provides a middle ground by only updating resources when they differ from the package version.
 - To check what resources are already installed, use `kodgin-cli install us.core --preprocess`.
 
 
@@ -211,11 +226,11 @@ kodjin-cli install --help
 $ kodjin-cli install --help
 Install a FHIR package
 
-Usage: kodjin-cli install [OPTIONS] <NAME>
+Usage: kodjin-cli install [OPTIONS] <NAME>...
 
 Arguments:
-  <NAME>
-          Item to process
+  <NAME>...
+          Items to process
 
 Options:
   -t, --type <TYPE>
@@ -226,6 +241,7 @@ Options:
           Possible values:
           - package:   FHIR Package from a registry
           - directory: Local directory
+          - file:      Single local file
 
   -r, --registry <REGISTRY>
           Registry URL for FHIR packages
@@ -241,7 +257,8 @@ Options:
 
           Possible values:
           - skip:      Skip existing resources
-          - overwrite: Overwrite existing resources
+          - sync:      Update existing resources if they are different from what's being installed
+          - overwrite: Always overwrite existing resources
 
       --skip-strict-reference-versions
           Do not change profile references to be version-specific, keep them as-is instead
