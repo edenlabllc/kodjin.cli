@@ -22,13 +22,6 @@ kodjin-cli generate-completions bash | sudo tee /etc/bash_completion.d/kodjin-cl
 ```
 Remember to open a new shell to test the functionality.
 
-## Elvish
-Use the next command to generate the file in elvish
-```shell
-```
-
-Remember to open a new shell to test the functionality.
-
 ## Fish
 Use the next command to generate the file in fish
 ```shell
@@ -40,7 +33,7 @@ Remember to open a new shell to test the functionality.
 For more information on where to write a completions in Fish, please, refer to [official documentation](https://fishshell.com/docs/current/completions.html#where-to-put-completions).
 
 ## Powershell
-Use the next command to generate the file in fish
+Use the next command to generate the file in Powershell
 ```shell
 ```
 

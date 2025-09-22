@@ -21,7 +21,7 @@ Optaions:
 
 ## --preprocess
 
-The option `--preprocess` allow you to perform all actions that is done by the install command. This could be usefull if you want to wark with conformance resources locally.
+The option `--preprocess` allow you to perform all actions that is done by the install command. This could be usefull if you want to work with conformance resources locally.
 
 When installing packages, kodjin-cli performs several updates to conformance resources, including:
 
