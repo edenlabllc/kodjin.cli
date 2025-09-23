@@ -1,16 +1,19 @@
 use crate::{
-    args::{Args, InstallType, LogsOutput, PackageCommand, ServerCommand},
+    args::{Args, GenerateCompletions, InstallType, LogsOutput, PackageCommand, ServerCommand},
     client::FhirClient,
+    completions,
     config::{Config, ServerConfig},
     installer::{self, Action, PackageContext, PLACEHOLDER_PACKAGE_NAME},
     print_values_table,
     registry::RegistryClient,
 };
-use anyhow::bail;
+use anyhow::{bail, Context};
+use clap::CommandFactory;
 use console::style;
 use indicatif::{MultiProgress, ProgressBar};
 use std::{
     collections::HashMap,
+    io,
     path::PathBuf,
     sync::{Arc, Mutex},
     time::Duration,
@@ -344,4 +347,28 @@ pub async fn download(
         preprocess,
     )
     .await
+}
+
+pub fn generate_completions(cmd: GenerateCompletions) -> anyhow::Result<()> {
+    let shell = match cmd.shell {
+        Some(shell) => shell,
+        None => {
+            let shell = completions::detect_shell()?;
+            eprintln!("Detected {shell} as the current shell");
+            shell
+        }
+    };
+
+    if cmd.install {
+        completions::install_completions(shell).context("Could not install completions")?;
+    } else {
+        clap_complete::generate(
+            shell,
+            &mut Args::command(),
+            Args::command().get_name(),
+            &mut io::stdout(),
+        );
+    }
+
+    Ok(())
 }

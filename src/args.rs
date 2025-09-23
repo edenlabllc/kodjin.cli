@@ -101,8 +101,12 @@ pub enum ServerCommand {
 
 #[derive(Parser, Clone, Debug)]
 pub struct GenerateCompletions {
+    /// Manually specify what shell to install completions for
     #[arg(value_enum)]
-    pub shell: Shell,
+    pub shell: Option<Shell>,
+    /// Automatically install completion files for the current/selected shell
+    #[clap(short, long, default_value_t = false)]
+    pub install: bool,
 }
 
 #[derive(Parser, Clone, Debug)]
