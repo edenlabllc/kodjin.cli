@@ -59,6 +59,7 @@ async fn run(args: Args) -> anyhow::Result<()> {
             subcommands::download(package_args, client, preprocess).await
         }
         CliCommand::GenerateCompletions(cmd) => subcommands::generate_completions(cmd),
+        CliCommand::Update { version } => subcommands::update(version).await,
     }
 }
 

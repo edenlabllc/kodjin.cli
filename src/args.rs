@@ -77,6 +77,11 @@ pub enum CliCommand {
     },
     /// Generate command autocompletions
     GenerateCompletions(GenerateCompletions),
+    /// Update `kodjin-cli`
+    Update {
+        /// Version to update to (default: latest)
+        version: Option<String>,
+    },
 }
 
 #[derive(Subcommand, Clone, Debug)]

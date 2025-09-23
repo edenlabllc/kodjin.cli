@@ -13,12 +13,17 @@ use console::style;
 use indicatif::{MultiProgress, ProgressBar};
 use std::{
     collections::HashMap,
-    io,
+    fs, io,
     path::PathBuf,
+    process::Command,
     sync::{Arc, Mutex},
     time::Duration,
 };
 use tokio::sync::Semaphore;
+
+const INSTALL_SCRIPT_URL: &str =
+    "https://edenlabllc-kodjin-cli.s3.eu-north-1.amazonaws.com/kodjin-cli/installer.sh";
+const INSTALLER_TEMPFILE: &str = "/tmp/kodjin-installer.sh";
 
 pub async fn server(cmd: ServerCommand, mut config: Config, args: &Args) -> anyhow::Result<()> {
     match cmd {
@@ -369,6 +374,34 @@ pub fn generate_completions(cmd: GenerateCompletions) -> anyhow::Result<()> {
             &mut io::stdout(),
         );
     }
+
+    Ok(())
+}
+
+pub async fn update(version: Option<String>) -> anyhow::Result<()> {
+    let response = reqwest::get(INSTALL_SCRIPT_URL).await?;
+    let script = response
+        .bytes()
+        .await
+        .context("Could not download installer")?;
+
+    fs::write(INSTALLER_TEMPFILE, script).context("Could not save installer")?;
+
+    let mut command = Command::new("sh");
+    command.arg(INSTALLER_TEMPFILE);
+
+    if let Some(version) = version {
+        command.arg(version);
+    }
+
+    let child = command.spawn()?;
+    let output = child.wait_with_output()?;
+
+    if !output.status.success() {
+        eprintln!("Update failed, see previous logs");
+    }
+
+    fs::remove_file(INSTALLER_TEMPFILE).context("Could not clean up installer")?;
 
     Ok(())
 }
