@@ -10,6 +10,14 @@ To install or update the version of `kodjin-cli` in the terminal run the command
 curl https://edenlabllc-kodjin-cli.s3.eu-north-1.amazonaws.com/kodjin-cli/installer.sh | sh -
 ```
 
+## Update
+
+To update kodjin-cli run the command `update`
+
+```shell
+kodjin-cli update
+```
+
 ## Getting Started
 
 Once installed, you can verify the installation by running:

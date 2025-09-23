@@ -9,7 +9,7 @@ kodjin-cli server <COMMAND> [OPTIONS]
 
 Subcommand that could be used with command `server`:
 
-## add      
+## add
 The `add` command allows you to register a new FHIR server URL in the configuration, making it available for IG installation. This is useful when working with multiple FHIR environments, such as local development, staging, or production servers.
 
 **Usage:**
@@ -41,7 +41,7 @@ Notes
 - Use `kodjin-cli server list` to see all configured servers.
 - If a server with the same URL already exists, the command will return an error.
 
-## default  
+## default
 The `default` command sets one of the previously added FHIR servers as the default. Once a server is set as default, you do not need to specify the server URL every time you run commands related to IG installation and validation, simplifying workflows.
 
 **Usage:**
