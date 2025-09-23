@@ -301,7 +301,14 @@ async fn uninstall_package<'a>(
             .await
         {
             Ok(()) => {
-                current_progress.lock().unwrap().report.created += 1;
+                bar.suspend(|| {
+                    println!(
+                        "Deleted {} {}",
+                        file.resource_info.resource_type,
+                        style(file.resource_info.canonical_url().unwrap_or(id)).bold()
+                    );
+                });
+                current_progress.lock().unwrap().report.removed += 1;
             }
             Err(error) => {
                 let file_path = file.get_path();
