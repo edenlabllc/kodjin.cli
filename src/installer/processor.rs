@@ -191,6 +191,9 @@ async fn process_resources_type(
             Action::Uninstall => match existing {
                 Some(existing) => match ctx.fhir_client.delete(resource_type, &existing.id).await {
                     Ok(()) => {
+                        bar.suspend(|| {
+                            println!("Deleted {resource_type} {}", style(existing.id).bold());
+                        });
                         processed_count += 1;
                         current_progress.lock().unwrap().report.removed += 1;
                     }
