@@ -29,7 +29,7 @@ pub fn install_completions(shell: Shell) -> anyhow::Result<()> {
     match shell {
         Shell::Bash => {
             if env::var("USER").is_ok_and(|user| user != "root") {
-                eprintln!("Elavating to root to install system-wide completions");
+                eprintln!("Elevating to root to install system-wide completions");
                 let child = Command::new("sudo")
                     .args([
                         "kodjin-cli",
@@ -45,7 +45,7 @@ pub fn install_completions(shell: Shell) -> anyhow::Result<()> {
         }
         Shell::Fish => {
             if env::var("USER").is_ok_and(|user| user != "root") {
-                eprintln!("Elavating to root to install system-wide completions");
+                eprintln!("Elevating to root to install system-wide completions");
                 let child = Command::new("sudo")
                     .args([
                         "kodjin-cli",
