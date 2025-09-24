@@ -6,6 +6,7 @@ use std::{
     fs::{self, File},
     io::{BufWriter, Write},
     path::Path,
+    process::Command,
     str::FromStr,
 };
 
@@ -27,10 +28,36 @@ pub fn detect_shell() -> anyhow::Result<Shell> {
 pub fn install_completions(shell: Shell) -> anyhow::Result<()> {
     match shell {
         Shell::Bash => {
-            write_completions_file(BASH_COMPLETIONS_PATH, "kodjin-cli.bash", Shell::Bash)?
+            if env::var("USER").is_ok_and(|user| user != "root") {
+                eprintln!("Elavating to root to install system-wide completions");
+                let child = Command::new("sudo")
+                    .args([
+                        "kodjin-cli",
+                        "generate-completions",
+                        &Shell::Bash.to_string(),
+                        "--install",
+                    ])
+                    .spawn()?;
+                child.wait_with_output()?;
+            } else {
+                write_completions_file(BASH_COMPLETIONS_PATH, "kodjin-cli.bash", Shell::Bash)?
+            }
         }
         Shell::Fish => {
-            write_completions_file(FISH_COMPLETIONS_PATH, "kodjin-cli.fish", Shell::Fish)?
+            if env::var("USER").is_ok_and(|user| user != "root") {
+                eprintln!("Elavating to root to install system-wide completions");
+                let child = Command::new("sudo")
+                    .args([
+                        "kodjin-cli",
+                        "generate-completions",
+                        &Shell::Fish.to_string(),
+                        "--install",
+                    ])
+                    .spawn()?;
+                child.wait_with_output()?;
+            } else {
+                write_completions_file(FISH_COMPLETIONS_PATH, "kodjin-cli.fish", Shell::Fish)?
+            }
         }
         Shell::Zsh => {
             let zshrc_path = Path::new(&env::var("HOME").context("HOME not set")?).join(ZSHRC);
