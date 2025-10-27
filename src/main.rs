@@ -34,19 +34,19 @@ async fn run(args: Args) -> anyhow::Result<()> {
     match args.command.clone() {
         CliCommand::Server(cmd) => subcommands::server(cmd, config, &args).await,
         CliCommand::Metadata => {
-            let client = get_client(&config, &args)?;
+            let client = get_client(&config, &args).await?;
             subcommands::metadata(client).await
         }
         CliCommand::Install(cmd) => {
-            let client = get_client(&config, &args)?;
+            let client = get_client(&config, &args).await?;
             subcommands::install(cmd, client, args.errors_output).await
         }
         CliCommand::Uninstall(cmd) => {
-            let client = get_client(&config, &args)?;
+            let client = get_client(&config, &args).await?;
             subcommands::uninstall(cmd, client, args.errors_output).await
         }
         CliCommand::Check(cmd) => {
-            let client = get_client(&config, &args)?;
+            let client = get_client(&config, &args).await?;
             subcommands::check(cmd, client, args.errors_output).await
         }
         CliCommand::Tree(cmd) => subcommands::tree(cmd).await,
@@ -55,7 +55,7 @@ async fn run(args: Args) -> anyhow::Result<()> {
             preprocess,
             package_args,
         } => {
-            let client = get_client(&config, &args)?;
+            let client = get_client(&config, &args).await?;
             subcommands::download(package_args, client, preprocess).await
         }
         CliCommand::GenerateCompletions(cmd) => subcommands::generate_completions(cmd),
@@ -67,7 +67,7 @@ fn print_error(error: anyhow::Error) {
     eprintln!("{} {error:#}", style("Error:").red());
 }
 
-fn get_client(config: &Config, args: &Args) -> anyhow::Result<FhirClient> {
+async fn get_client(config: &Config, args: &Args) -> anyhow::Result<FhirClient> {
     let server_config = match &args.server {
         Some(requested_server) => config
             .servers
@@ -79,10 +79,10 @@ fn get_client(config: &Config, args: &Args) -> anyhow::Result<FhirClient> {
     FhirClient::new(
         server_config.url.clone(),
         server_config.search_url.clone(),
-        args.insecure_certificates,
+        args,
         Duration::from_secs(args.request_timeout),
-        &args.header,
     )
+    .await
 }
 
 fn print_values_table(values: &[(&str, Option<impl Deref<Target = str>>)]) {

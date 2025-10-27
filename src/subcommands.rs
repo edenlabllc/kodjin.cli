@@ -82,10 +82,10 @@ pub async fn server(cmd: ServerCommand, mut config: Config, args: &Args) -> anyh
             let client = FhirClient::new(
                 url.clone(),
                 search_url.clone(),
-                args.insecure_certificates,
+                args,
                 Duration::from_secs(args.request_timeout),
-                &args.header,
-            )?;
+            )
+            .await?;
             let metadata = client.get_metadata().await?;
 
             config

@@ -27,6 +27,11 @@ pub struct Args {
     /// Additional header to be sent to the FHIR server.
     #[clap(short = 'H', long)]
     pub header: Vec<String>,
+    /// Specify authentication type
+    #[clap(short, long)]
+    pub auth: Option<Auth>,
+    #[clap(flatten)]
+    pub auth_options: AuthOptions,
     /// Skip TLS certificate validation
     #[clap(long, default_value_t = false)]
     pub insecure_certificates: bool,
@@ -82,6 +87,32 @@ pub enum CliCommand {
         /// Version to update to (default: latest)
         version: Option<String>,
     },
+}
+
+#[derive(Parser, Debug, Clone)]
+pub struct AuthOptions {
+    /// Username for authorization
+    #[clap(short, long)]
+    pub user: Option<String>,
+    /// Password for authorization
+    #[clap(short, long)]
+    pub password: Option<String>,
+    /// Bearer token for authorization
+    #[clap(short, long)]
+    pub bearer: Option<String>,
+
+    /// Oauth token URL
+    #[clap(long)]
+    pub token_url: Option<String>,
+    /// Oauth client ID
+    #[clap(long)]
+    pub client_id: Option<String>,
+    /// Oauth client secret
+    #[clap(long)]
+    pub client_secret: Option<String>,
+    /// Oauth scopes
+    #[clap(long)]
+    pub scope: Vec<String>,
 }
 
 #[derive(Subcommand, Clone, Debug)]
@@ -175,6 +206,16 @@ pub enum InstallType {
     Directory,
     /// Single local file
     File,
+}
+
+#[derive(Clone, Copy, Debug, ValueEnum, Display)]
+pub enum Auth {
+    /// HTTP Basic Auth
+    Basic,
+    /// Bearer Token
+    Bearer,
+    /// Oauth2 (Client Credentials flow)
+    Oauth,
 }
 
 #[derive(Clone, Debug, Default)]
