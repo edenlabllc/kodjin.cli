@@ -21,29 +21,41 @@ pub fn sort_resources_by_dependencies(
 pub fn get_resources_order(resource_type: &str, resources: &[Resource]) -> Vec<usize> {
     match resource_type {
         "StructureDefinition" => {
-            let urls: IndexMap<&str, usize> = resources
-                .iter()
-                .enumerate()
-                .filter_map(|(i, resource)| Some((resource.info.url.as_deref()?, i)))
-                .collect();
-            let mut item_info: IndexMap<&str, ItemInfo<'_>> = urls
-                .iter()
-                .map(|(&url, &index)| {
-                    let resource = &resources[index];
+            let mut urls: IndexMap<&str, Vec<usize>> = IndexMap::with_capacity(resources.len());
 
-                    let mut dependencies = get_dependencies(&resource.data, resource_type);
-                    dependencies.retain(|url| urls.contains_key(url));
+            for (i, resource) in resources.iter().enumerate() {
+                if let Some(url) = &resource.info.url {
+                    urls.entry(url).or_default().push(i);
+                }
+            }
 
-                    let info = ItemInfo {
-                        index,
-                        dependencies,
-                    };
+            let mut item_info: IndexMap<&str, Vec<ItemInfo<'_>>> = urls
+                .iter()
+                .map(|(&url, indexes)| {
+                    let info = indexes
+                        .iter()
+                        .map(|&index| {
+                            let resource = &resources[index];
+
+                            let mut dependencies = get_dependencies(&resource.data, resource_type);
+                            dependencies.retain(|url| urls.contains_key(url));
+
+                            ItemInfo {
+                                index,
+                                dependencies,
+                            }
+                        })
+                        .collect();
+
                     (url, info)
                 })
                 .collect();
+
             let mut order = Vec::with_capacity(item_info.len());
-            while let Some((_, current_item)) = item_info.pop() {
-                collect_item_indexes(&mut item_info, current_item, &mut order);
+            while let Some((_, items)) = item_info.pop() {
+                for current_item in items {
+                    collect_item_indexes(&mut item_info, current_item, &mut order);
+                }
             }
             order
         }
@@ -61,13 +73,15 @@ fn sort_with_order(resources: Vec<Resource>, order: &[usize]) -> Vec<Resource> {
 }
 
 fn collect_item_indexes(
-    items: &mut IndexMap<&str, ItemInfo<'_>>,
+    items: &mut IndexMap<&str, Vec<ItemInfo<'_>>>,
     current_item: ItemInfo<'_>,
     order: &mut Vec<usize>,
 ) {
     for dependency in current_item.dependencies {
-        if let Some(item) = items.swap_remove(dependency) {
-            collect_item_indexes(items, item, order);
+        if let Some(dependency_items) = items.swap_remove(dependency) {
+            for item in dependency_items {
+                collect_item_indexes(items, item, order);
+            }
         }
     }
 
