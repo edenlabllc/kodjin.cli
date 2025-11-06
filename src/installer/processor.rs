@@ -1,3 +1,5 @@
+pub mod resolver;
+
 use super::{
     package::{PackageIndex, PackageIndexFile},
     resource::{Resource, ResourceInfo},
@@ -8,6 +10,7 @@ use crate::{
     client::{FhirClient, FhirError},
     installer::{
         print_check_status,
+        processor::resolver::sort_resources_by_dependencies,
         progress::{InstallProgress, InstallState},
         resource::is_resource_changed,
     },
@@ -120,6 +123,10 @@ async fn process_resources_type(
 ) -> usize {
     bar.reset();
     bar.set_length(resources.len() as u64);
+    bar.set_message(format!("Ordering {resource_type} resources"));
+
+    let resources = sort_resources_by_dependencies(resource_type, resources);
+
     bar.set_message(format!("Checking {resource_type} resources"));
 
     let requests = resources.into_iter().map(|resource| async {

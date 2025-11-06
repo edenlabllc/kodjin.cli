@@ -4,6 +4,7 @@ use std::path::PathBuf;
 
 const RESOURCE_COMPARISON_IGNORED_FIELDS: &[&str] = &["/meta/lastUpdated", "/meta/versionId"];
 
+#[derive(Default)]
 pub struct Resource {
     pub data: Value,
     pub info: ResourceInfo,
@@ -20,7 +21,7 @@ impl Resource {
     }
 }
 
-#[derive(Deserialize, Debug, PartialEq, Eq, Clone)]
+#[derive(Deserialize, Debug, PartialEq, Eq, Clone, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct ResourceInfo {
     pub resource_type: String,

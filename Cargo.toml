@@ -1,6 +1,6 @@
 [package]
 name = "kodjin-cli"
-version = "0.1.7"
+version = "0.1.8"
 edition = "2021"
 
 [dependencies]
@@ -37,3 +37,6 @@ uuid = { version = "1.10.0", features = ["v4", "serde"] }
 [profile.release]
 lto = false
 strip = true
+
+[dev-dependencies]
+pretty_assertions = "1.4.1"

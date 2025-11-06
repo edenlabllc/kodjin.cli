@@ -11,7 +11,9 @@ pub const PLACEHOLDER_PACKAGE_NAME: &str = "local";
 use crate::{
     args::{ExistingResourceBehaviour, InstallType, LogsOutput},
     client::{operation_outcome::OperationOutcome, FhirClient, FhirError},
-    installer::processor::find_installed_resource,
+    installer::processor::{
+        find_installed_resource, resolver::get_resources_order, ExistingResource,
+    },
     print_values_table,
     registry::RegistryClient,
 };
@@ -37,6 +39,7 @@ use std::{
     collections::HashMap,
     fs::{self, File},
     io::{BufWriter, Write},
+    mem,
     path::{Path, PathBuf},
     sync::{Arc, Mutex},
     time::Instant,
@@ -368,19 +371,17 @@ async fn process_package_files(
     current_index: &PackageIndex,
     bar: &ProgressBar,
     current_progress: &Mutex<InstallProgress>,
-    // progress: &MultiProgress,
 ) -> anyhow::Result<()> {
     let full_name = format!("{}@{}", manifest.name, manifest.version);
     let mut errors_writer = ErrorsWriter::from_ctx(ctx, &full_name)?;
 
-    for (file, existing_resource) in files {
-        bar.set_message(format!(
-            "{} {} {}",
-            ctx.action.bar_prefix(),
-            file.resource_info.resource_type,
-            file.resource_info.id
-        ));
+    bar.set_message(format!("{} Reading files", ctx.action.bar_prefix(),));
 
+    // Grouped by resource type
+    let mut resources: IndexMap<String, (Vec<Resource>, Vec<Option<ExistingResource>>)> =
+        IndexMap::new();
+
+    for (file, existing_resource) in files {
         let file_path = file.get_path();
 
         let full_file_path = package.dir.join(&file_path);
@@ -404,48 +405,70 @@ async fn process_package_files(
             info: file.resource_info.clone(),
             source_path: file_path.clone(),
         };
+        let (resource_type, existing_resources) = resources
+            .entry(resource.info.resource_type.clone())
+            .or_default();
+        resource_type.push(resource);
+        existing_resources.push(existing_resource);
+    }
 
-        let resource_info = resource.info.clone();
+    for (resource_type, (mut resources, mut existing_resources)) in resources {
+        let order = get_resources_order(&resource_type, &resources);
 
-        match processor::process_resource(
-            ctx,
-            &file.resource_info.resource_type,
-            resource,
-            current_index,
-            &full_name,
-            bar,
-            existing_resource,
-        )
-        .await
-        {
-            Ok(result) => {
-                current_progress
-                    .lock()
-                    .unwrap()
-                    .report
-                    .add_install_result(result);
+        for i in order {
+            let resource = mem::take(&mut resources[i]);
+            let existing_resource = mem::take(&mut existing_resources[i]);
+
+            bar.set_message(format!(
+                "{} {} {}",
+                ctx.action.bar_prefix(),
+                resource.info.resource_type,
+                resource.info.id
+            ));
+
+            let resource_info = resource.info.clone();
+            let file_path = resource.source_path.clone();
+
+            match processor::process_resource(
+                ctx,
+                &resource_type,
+                resource,
+                current_index,
+                &full_name,
+                bar,
+                existing_resource,
+            )
+            .await
+            {
+                Ok(result) => {
+                    current_progress
+                        .lock()
+                        .unwrap()
+                        .report
+                        .add_install_result(result);
+                }
+                Err(error) => {
+                    let path: PathBuf = file_path.components().skip(1).collect();
+
+                    log_resource_error(
+                        &mut errors_writer,
+                        error,
+                        &file_path,
+                        &full_name,
+                        bar,
+                        Some(&resource_info),
+                    );
+
+                    current_progress
+                        .lock()
+                        .unwrap()
+                        .errors
+                        .push(ResourceError { path });
+                    current_progress.lock().unwrap().report.errors += 1;
+                }
             }
-            Err(error) => {
-                let path: PathBuf = file_path.components().skip(1).collect();
-
-                log_resource_error(
-                    &mut errors_writer,
-                    error,
-                    &file_path,
-                    &full_name,
-                    bar,
-                    Some(&resource_info),
-                );
-
-                current_progress
-                    .lock()
-                    .unwrap()
-                    .errors
-                    .push(ResourceError { path });
-                current_progress.lock().unwrap().report.errors += 1;
-            }
+            bar.inc(1);
         }
-        bar.inc(1);
     }
 
     if let ErrorsWriter::File(mut file) = errors_writer {
@@ -621,7 +644,7 @@ pub async fn process_file(ctx: &PackageContext<'_>, files: &[String]) -> anyhow:
     Ok(())
 }
 
-fn load_file(
+pub(crate) fn load_file(
     resources: &mut IndexMap<String, Vec<Resource>>,
     path: &Path,
     source_path: &Path,
