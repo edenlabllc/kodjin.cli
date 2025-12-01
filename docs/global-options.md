@@ -2,11 +2,11 @@
 
 When running kodjin-cli, you can specify global options to customize its behavior. For instance, you may choose an output folder for logs or define a specific server if it differs from the default. Below is a list of available options, along with descriptions and usage examples.
 
-In case opation uses an argument they should be separated with a space. In this documentation arguments are mentioned in angle brackets 
+In case option uses an argument they should be separated with a space. In this documentation arguments are mentioned in angle brackets.
 
 ## -s, --server <SERVER>
 
-If you want to use server that differ from defaulf you can add `--server` option. To see the default version of the server use [server list command](/command-server/#list)
+If you want to use server that differ from default you can add `--server` option. To see the default version of the server use [server list command](/command-server/#list)
 
 **Usage:**
 ```shell
@@ -15,7 +15,7 @@ kodjin-cli --server <server>
 
 **Example:**
 
-In this example we will check what is the default sever is and then use for installing IG to the one that is not default
+In this example we will check what is the default server is and then use for installing IG to the one that is not default
 ```shell
 $ kodjin-cli server list
 
@@ -26,12 +26,175 @@ List of currently configured servers:
 $ kodjin-cli --server https://develop.com/fhir install hl7.fhir.us.core@4.0.0
 ```
 
-If you want to instal IG to your default server, then you do not need to use this flag
+If you want to install IG to your default server, then you do not need to use this flag.
 
+## -H, --header <HEADER>
+
+Adds a custom HTTP header to requests sent to the FHIR server. This option can be used multiple times to add several headers. Headers should be specified in the format `Header-Name: value`.
+
+**Usage:**
+```shell
+kodjin-cli --header <header>
+```
+
+**Example:**
+
+In this example, we will add a custom header to the request:
+```shell
+$ kodjin-cli --header "X-Custom-Header: custom-value" install hl7.fhir.us.core@4.0.0
+```
+
+To add multiple headers:
+```shell
+$ kodjin-cli --header "X-Custom-Header: value1" --header "X-Another-Header: value2" install hl7.fhir.us.core@4.0.0
+```
+
+## -a, --auth <AUTH>
+
+Specifies the authentication type to use when connecting to the FHIR server. This option determines how kodjin-cli will authenticate with the server.
+
+**Available authentication types:**
+
+- `basic` – HTTP Basic Authentication
+- `bearer` – Bearer Token Authentication
+- `oauth` – OAuth2 (Client Credentials flow)
+
+**Usage:**
+```shell
+kodjin-cli --auth <auth-type>
+```
+
+**Examples:**
+
+Using Basic Authentication:
+```shell
+$ kodjin-cli --auth basic --user myusername --password mypassword install hl7.fhir.us.core@4.0.0
+```
+
+Using Bearer Token:
+```shell
+$ kodjin-cli --auth bearer --bearer mytoken123 install hl7.fhir.us.core@4.0.0
+```
+
+Using OAuth2:
+```shell
+$ kodjin-cli --auth oauth --token-url https://auth.example.com/token --client-id myclientid --client-secret myclientsecret install hl7.fhir.us.core@4.0.0
+```
+
+## -u, --user <USER>
+
+Specifies the username for authentication. This option is used in conjunction with `--auth basic` for HTTP Basic Authentication.
+
+**Usage:**
+```shell
+kodjin-cli --auth basic --user <username>
+```
+
+**Example:**
+
+```shell
+$ kodjin-cli --auth basic --user admin --password secretpass install hl7.fhir.us.core@4.0.0
+```
+
+## -p, --password <PASSWORD>
+
+Specifies the password for authentication. This option is used in conjunction with `--auth basic` for HTTP Basic Authentication.
+
+> Note: Be cautious when using passwords in command-line arguments, as they may be visible in command history or process listings.
+
+**Usage:**
+```shell
+kodjin-cli --auth basic --password <password>
+```
+
+**Example:**
+
+```shell
+$ kodjin-cli --auth basic --user admin --password secretpass install hl7.fhir.us.core@4.0.0
+```
+
+## -b, --bearer <BEARER>
+
+Specifies the bearer token for authentication. This option is used in conjunction with `--auth bearer` for Bearer Token Authentication.
+
+**Usage:**
+```shell
+kodjin-cli --auth bearer --bearer <token>
+```
+
+**Example:**
+
+```shell
+$ kodjin-cli --auth bearer --bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9... install hl7.fhir.us.core@4.0.0
+```
+
+## --token-url <TOKEN_URL>
+
+Specifies the OAuth2 token endpoint URL. This option is required when using `--auth oauth` for OAuth2 authentication with the Client Credentials flow.
+
+**Usage:**
+```shell
+kodjin-cli --auth oauth --token-url <url>
+```
+
+**Example:**
+
+```shell
+$ kodjin-cli --auth oauth --token-url https://auth.example.com/oauth/token --client-id myclientid --client-secret myclientsecret install hl7.fhir.us.core@4.0.0
+```
+
+## --client-id <CLIENT_ID>
+
+Specifies the OAuth2 client ID. This option is required when using `--auth oauth` for OAuth2 authentication.
+
+**Usage:**
+```shell
+kodjin-cli --auth oauth --client-id <client-id>
+```
+
+**Example:**
+
+See the `--token-url` example above for complete OAuth2 usage.
+
+## --client-secret <CLIENT_SECRET>
+
+Specifies the OAuth2 client secret. This option is required when using `--auth oauth` for OAuth2 authentication.
+
+> Note: Be cautious when using client secrets in command-line arguments, as they may be visible in command history or process listings.
+
+**Usage:**
+```shell
+kodjin-cli --auth oauth --client-secret <client-secret>
+```
+
+**Example:**
+
+See the `--token-url` example above for complete OAuth2 usage.
+
+## --scope <SCOPE>
+
+Specifies OAuth2 scopes to request during authentication. This option can be used multiple times to request multiple scopes.
+
+**Usage:**
+```shell
+kodjin-cli --auth oauth --scope <scope>
+```
+
+**Example:**
+
+Requesting a single scope:
+```shell
+$ kodjin-cli --auth oauth --token-url https://auth.example.com/token --client-id myclientid --client-secret myclientsecret --scope read install hl7.fhir.us.core@4.0.0
+```
+
+Requesting multiple scopes:
+```shell
+$ kodjin-cli --auth oauth --token-url https://auth.example.com/token --client-id myclientid --client-secret myclientsecret --scope read --scope write install hl7.fhir.us.core@4.0.0
+```
 
 ## --insecure-certificates
 
-Skips TLS (Transport Layer Security) certificate validation, allowing connections to servers with self-signed or invalid certificates. 
+Skips TLS (Transport Layer Security) certificate validation, allowing connections to servers with self-signed or invalid certificates.
 
 > Note: This option should be used with caution and only in trusted development or testing environments, as it bypasses a key security measure.
 
@@ -58,11 +221,10 @@ kodjin-cli --request-timeout <number>
 
 **Example:**
 
-In this example, we will increase waiting time for the response
+In this example, we will increase waiting time for the response:
 ```shell
 $ kodjin-cli --request-timeout 40 install hl7.fhir.us.core@4.0.0
 ```
-
 
 ## --errors-output <ERRORS_OUTPUT>
 
@@ -81,7 +243,7 @@ Each system has its own default directory:
 | macOS    | $HOME/Library/Application Support    | /Users/<username\>/Library/Application Support |
 | Windows  | {FOLDER_LocalAppData}                | C:\Users\\<username\>\AppData\Local            |
 
--  `folder path` - instead of writing OperationOutcome .ndjson files to the default directory you can choose any directory
+- `folder path` - instead of writing OperationOutcome .ndjson files to the default directory you can choose any directory
 
 **Usage:**
 ```shell
@@ -90,20 +252,20 @@ kodjin-cli --errors-output=<stderr|directory|folder path> <command>
 
 **Examples:**
 
-As `stderr` is a default value to use this value we do not need to add an option
+As `stderr` is a default value to use this value we do not need to add an option:
 
 ```shell
 $ kodjin-cli install hl7.fhir.au.base@4.2.2-ballot
 ```
 
-The next example is to write outcome files to the directory
+The next example is to write outcome files to the directory:
 ```shell
-kodjin-cli --errors-output=directory install hl7.fhir.au.base@4.2.2-ballot
+$ kodjin-cli --errors-output=directory install hl7.fhir.au.base@4.2.2-ballot
 ```
 
-Current example is how to write outcome files to the local directory. We will write them to the currect directory
+Current example is how to write outcome files to the local directory. We will write them to the current directory:
 ```shell
-kodjin-cli --errors-output=. install hl7.fhir.au.base@4.2.2-ballot
+$ kodjin-cli --errors-output=. install hl7.fhir.au.base@4.2.2-ballot
 ```
 
 ## -h, --help
@@ -112,13 +274,12 @@ Displays help information for kodjin-cli, including available commands, options,
 
 - This option can be used with any command to get more details on its usage.
 - Running kodjin-cli without arguments may also display the help menu.
-- The [`kodjin-cli help` command](./command-help.md) also return the help information.
+- The [`kodjin-cli help` command](./command-help.md) also returns the help information.
 
 Help options:
 
 - `-h` - returns summary information
 - `--help` - returns full help information
-
 
 **Usage:**
 ```shell
