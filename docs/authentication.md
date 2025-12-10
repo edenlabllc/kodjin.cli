@@ -29,15 +29,3 @@ Use the `-H` flag to add the Authorization header with your base64-encoded crede
 ```bash
 kodjin-cli -H 'Authorization: Basic <base64-encoded-credentials>' <command>
 ```
-
-## Security Considerations
-
-### Environment Variables
-
-For better security, store credentials in environment variables:
-
-```bash
-# Use in commands
-ENCODED_CREDS=$(echo -n 'username:password' | base64)
-kodjin-cli -H "Authorization: Basic $ENCODED_CREDS" metadata
-```

@@ -13,41 +13,6 @@ The command `generate-competions` generates the completion file. Different comma
 kodjin-cli generate-completions <SHELL>
 ```
 
-All examples are a full comands with the > redirect symbol. So, to generate the file, you have to copy and paste the command bellow into your shell.
-
-### Bash
-Use the next command to generate the file in bash 
-```shell
-kodjin-cli generate-completions bash | sudo tee /etc/bash_completion.d/kodjin-cli.sh
-```
-Remember to open a new shell to test the functionality.
-
-### Fish
-Use the next command to generate the file in fish
-```shell
-mkdir -p ~/.config/fish/completions/ && kodjin-cli generate-completions fish > ~/.config/fish/completions/kodjin-cli.fish
-```
-
-Remember to open a new shell to test the functionality.
-
-For more information on where to write a completions in Fish, please, refer to [official documentation](https://fishshell.com/docs/current/completions.html#where-to-put-completions).
-
-### Powershell
-Use the next command to generate the file in Powershell
-```shell
-```
-
-Remember to open a new shell to test the functionality.
-
-For more information on tab-completion on PowerShell, please, refer to [Autocomplete in PowerShell](https://techcommunity.microsoft.com/t5/itops-talk-blog/autocomplete-in-powershell/ba-p/2604524).
-
-### Zsh
-Use the next command to generate the file in zsh
-
-```shell
-kodjin-cli generate-completions zsh >> ~/.zshrc
-```
-
 Remember to open a new shell to test the functionality.
 
 ## Options:
