@@ -80,8 +80,8 @@ Using OAuth2:
 ```shell
 $ kodjin-cli --auth oauth --token-url https://auth.example.com/token --client-id myclientid --client-secret myclientsecret install hl7.fhir.us.core@4.0.0
 ```
-
-## -u, --user <USER>
+## HTTP Basic Authentication
+### -u, --user <USER>
 
 Specifies the username for authentication. This option is used in conjunction with `--auth basic` for HTTP Basic Authentication.
 
@@ -90,13 +90,7 @@ Specifies the username for authentication. This option is used in conjunction wi
 kodjin-cli --auth basic --user <username>
 ```
 
-**Example:**
-
-```shell
-$ kodjin-cli --auth basic --user admin --password secretpass install hl7.fhir.us.core@4.0.0
-```
-
-## -p, --password <PASSWORD>
+### -p, --password <PASSWORD>
 
 Specifies the password for authentication. This option is used in conjunction with `--auth basic` for HTTP Basic Authentication.
 
@@ -113,7 +107,8 @@ kodjin-cli --auth basic --password <password>
 $ kodjin-cli --auth basic --user admin --password secretpass install hl7.fhir.us.core@4.0.0
 ```
 
-## -b, --bearer <BEARER>
+## Bearer Token Authentication
+### -b, --bearer <BEARER>
 
 Specifies the bearer token for authentication. This option is used in conjunction with `--auth bearer` for Bearer Token Authentication.
 
@@ -128,7 +123,8 @@ kodjin-cli --auth bearer --bearer <token>
 $ kodjin-cli --auth bearer --bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9... install hl7.fhir.us.core@4.0.0
 ```
 
-## --token-url <TOKEN_URL>
+## OAuth2 (Client Credentials flow)
+### --token-url <TOKEN_URL>
 
 Specifies the OAuth2 token endpoint URL. This option is required when using `--auth oauth` for OAuth2 authentication with the Client Credentials flow.
 
@@ -137,13 +133,7 @@ Specifies the OAuth2 token endpoint URL. This option is required when using `--a
 kodjin-cli --auth oauth --token-url <url>
 ```
 
-**Example:**
-
-```shell
-$ kodjin-cli --auth oauth --token-url https://auth.example.com/oauth/token --client-id myclientid --client-secret myclientsecret install hl7.fhir.us.core@4.0.0
-```
-
-## --client-id <CLIENT_ID>
+### --client-id <CLIENT_ID>
 
 Specifies the OAuth2 client ID. This option is required when using `--auth oauth` for OAuth2 authentication.
 
@@ -152,44 +142,31 @@ Specifies the OAuth2 client ID. This option is required when using `--auth oauth
 kodjin-cli --auth oauth --client-id <client-id>
 ```
 
-**Example:**
-
-See the `--token-url` example above for complete OAuth2 usage.
-
-## --client-secret <CLIENT_SECRET>
+### --client-secret <CLIENT_SECRET>
 
 Specifies the OAuth2 client secret. This option is required when using `--auth oauth` for OAuth2 authentication.
 
 > Note: Be cautious when using client secrets in command-line arguments, as they may be visible in command history or process listings.
 
-**Usage:**
-```shell
-kodjin-cli --auth oauth --client-secret <client-secret>
-```
+### --scope <SCOPE>
 
-**Example:**
-
-See the `--token-url` example above for complete OAuth2 usage.
-
-## --scope <SCOPE>
-
-Specifies OAuth2 scopes to request during authentication. This option can be used multiple times to request multiple scopes.
+Specifies OAuth2 scopes to request during authentication. This option is required when using `--auth oauth` for OAuth2 authentication.
 
 **Usage:**
 ```shell
-kodjin-cli --auth oauth --scope <scope>
+kodjin-cli --auth oauth --scope "<scope>"
 ```
 
 **Example:**
 
 Requesting a single scope:
 ```shell
-$ kodjin-cli --auth oauth --token-url https://auth.example.com/token --client-id myclientid --client-secret myclientsecret --scope read install hl7.fhir.us.core@4.0.0
+$ kodjin-cli --auth oauth --token-url https://auth.example.com/token --client-id myclientid --client-secret myclientsecret --scope "user/Patient.read" install hl7.fhir.us.core@4.0.0
 ```
 
 Requesting multiple scopes:
 ```shell
-$ kodjin-cli --auth oauth --token-url https://auth.example.com/token --client-id myclientid --client-secret myclientsecret --scope read --scope write install hl7.fhir.us.core@4.0.0
+$ kodjin-cli --auth oauth --token-url https://auth.example.com/token --client-id myclientid --client-secret myclientsecret --scope "user/Patient.read user/Patient.write" install hl7.fhir.us.core@4.0.0
 ```
 
 ## --insecure-certificates
