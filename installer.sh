@@ -1,0 +1,28 @@
+#!/bin/env bash
+set -e
+
+URL="https://edenlabllc-kodjin-cli.s3.eu-north-1.amazonaws.com/kodjin-cli"
+VERSION="${1:-latest}"
+
+OS=$(uname -s)
+ARCH=$(uname -m)
+
+if [ "${ARCH}" == "aarch64" ]; then
+    ARCH="arm64"
+fi
+
+FILE_URL="${URL}/${VERSION}/kodjin-cli_${OS}_${ARCH}.tar.gz"
+echo "Downloading ${FILE_URL}"
+DOWNLOAD_PATH=/tmp/kodjin-cli.tar.gz
+
+curl "${FILE_URL}" -o "${DOWNLOAD_PATH}"
+
+TARGET_PATH="/usr/local/bin"
+echo "Extracting binary to ${TARGET_PATH}"
+sudo sh -c "mkdir -p ${TARGET_PATH} && tar xf ${DOWNLOAD_PATH} -C ${TARGET_PATH}"
+
+echo "Installing shell completions"
+kodjin-cli generate-completions --install || true
+
+echo "Installation finished!"
+kodjin-cli --version

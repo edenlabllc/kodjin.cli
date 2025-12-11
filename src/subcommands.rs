@@ -1,16 +1,29 @@
 use crate::{
-    args::{Args, InstallType, LogsOutput, PackageCommand, ServerCommand},
+    args::{Args, GenerateCompletions, InstallType, LogsOutput, PackageCommand, ServerCommand},
     client::FhirClient,
+    completions,
     config::{Config, ServerConfig},
-    installer::{self, InstallContext},
+    installer::{self, Action, PackageContext, PLACEHOLDER_PACKAGE_NAME},
     print_values_table,
     registry::RegistryClient,
 };
-use anyhow::bail;
+use anyhow::{bail, Context};
+use clap::CommandFactory;
 use console::style;
 use indicatif::{MultiProgress, ProgressBar};
-use std::{collections::HashMap, path::PathBuf, sync::Mutex, time::Duration};
+use std::{
+    collections::HashMap,
+    fs, io,
+    path::PathBuf,
+    process::Command,
+    sync::{Arc, Mutex},
+    time::Duration,
+};
 use tokio::sync::Semaphore;
+
+const INSTALL_SCRIPT_URL: &str =
+    "https://edenlabllc-kodjin-cli.s3.eu-north-1.amazonaws.com/kodjin-cli/installer.sh";
+const INSTALLER_TEMPFILE: &str = "/tmp/kodjin-installer.sh";
 
 pub async fn server(cmd: ServerCommand, mut config: Config, args: &Args) -> anyhow::Result<()> {
     match cmd {
@@ -20,7 +33,15 @@ pub async fn server(cmd: ServerCommand, mut config: Config, args: &Args) -> anyh
                 style("List of currently configured servers:").underlined()
             );
 
-            for (server_name, server_config) in &config.servers {
+            let mut servers = config
+                .servers
+                .iter()
+                .map(|(name, server)| (name, server, config.current_server.as_ref() == Some(name)))
+                .collect::<Vec<_>>();
+
+            servers.sort_by_key(|(name, server, default)| (!*default, *name, &server.url));
+
+            for (server_name, server_config, is_default) in servers {
                 print!("- ");
                 if *server_name == server_config.url {
                     print!("{}", style(server_name).bold());
@@ -28,7 +49,7 @@ pub async fn server(cmd: ServerCommand, mut config: Config, args: &Args) -> anyh
                     print!("{} ({})", style(server_name).bold(), server_config.url);
                 }
 
-                if config.current_server.as_ref() == Some(server_name) {
+                if is_default {
                     print!(" {}", style("(default)").bold());
                 }
                 println!();
@@ -36,11 +57,23 @@ pub async fn server(cmd: ServerCommand, mut config: Config, args: &Args) -> anyh
 
             Ok(())
         }
-        ServerCommand::Add { url, name } => {
+        ServerCommand::Add {
+            url,
+            name,
+            search_url,
+        } => {
             let name = name.unwrap_or_else(|| url.clone());
 
             if config.servers.contains_key(&name) {
                 bail!("Server {name} already exists");
+            }
+
+            if let Some((name, _)) = config.servers.iter().find(|(_, server)| server.url == url) {
+                if *name == url {
+                    bail!("Server wth url {url} already exists");
+                } else {
+                    bail!("Server wth url {url} already exists ({name})");
+                }
             }
 
             let bar = ProgressBar::new_spinner().with_message(format!("Checking server {url}"));
@@ -48,16 +81,17 @@ pub async fn server(cmd: ServerCommand, mut config: Config, args: &Args) -> anyh
 
             let client = FhirClient::new(
                 url.clone(),
-                args.insecure_certificates,
+                search_url.clone(),
+                args,
                 Duration::from_secs(args.request_timeout),
-            );
+            )
+            .await?;
             let metadata = client.get_metadata().await?;
 
-            config.servers.insert(name.clone(), ServerConfig { url });
-
-            if config.servers.len() == 1 {
-                config.current_server = Some(config.servers.keys().next().unwrap().clone());
-            }
+            config
+                .servers
+                .insert(name.clone(), ServerConfig { url, search_url });
+            config.current_server = Some(name.clone());
 
             config.save()?;
 
@@ -137,34 +171,36 @@ pub async fn install(
     client: FhirClient,
     errors_output: LogsOutput,
 ) -> anyhow::Result<()> {
-    let multi_progress = MultiProgress::new();
-    let semaphore = Semaphore::new(5);
+    let registry_client = RegistryClient::new(cmd.registry.clone());
+    let ctx = install_ctx(
+        &cmd,
+        Action::Install,
+        &client,
+        &registry_client,
+        &errors_output,
+    );
 
-    let packages = Mutex::new(HashMap::new());
-    let registry_client = RegistryClient::new(cmd.registry);
-
-    let ctx = InstallContext {
-        fhir_client: &client,
-        action: installer::Action::Install,
-        progress: &multi_progress,
-        packages_progress: &packages,
-        semaphore: &semaphore,
-        registry_client: &registry_client,
-        skip_strict_reference_versions: cmd.skip_strict_reference_versions,
-        existing_resources_behaviour: cmd.existing_resources,
-        errors_output: &errors_output,
-        start_time: chrono::Local::now(),
-    };
-
-    match cmd.r#type {
+    let name = match cmd.r#type {
         InstallType::Package => {
-            installer::install_package_by_name(ctx, cmd.name.clone()).await?;
+            let [name] = cmd.name.as_slice() else {
+                bail!("Only one package may be supplied at a time");
+            };
+            installer::process_package_by_name(&ctx, name).await?;
+            name
         }
         InstallType::Directory => {
-            installer::process_directory(ctx, &PathBuf::from(cmd.name.clone())).await?;
+            let [name] = cmd.name.as_slice() else {
+                bail!("Only one directory may be supplied at a time");
+            };
+            installer::process_directory(&ctx, &PathBuf::from(&name)).await?;
+            name
         }
-    }
-    installer::print_report(ctx, &cmd.name);
+        InstallType::File => {
+            installer::process_file(&ctx, &cmd.name).await?;
+            PLACEHOLDER_PACKAGE_NAME
+        }
+    };
+    installer::print_report(&ctx, name);
 
     Ok(())
 }
@@ -174,34 +210,36 @@ pub async fn uninstall(
     client: FhirClient,
     errors_output: LogsOutput,
 ) -> anyhow::Result<()> {
-    let multi_progress = MultiProgress::new();
-    let semaphore = Semaphore::new(5);
+    let registry_client = RegistryClient::new(cmd.registry.clone());
+    let ctx = install_ctx(
+        &cmd,
+        Action::Uninstall,
+        &client,
+        &registry_client,
+        &errors_output,
+    );
 
-    let packages = Mutex::new(HashMap::new());
-    let registry_client = RegistryClient::new(cmd.registry);
-
-    let ctx = InstallContext {
-        fhir_client: &client,
-        action: installer::Action::Uninstall,
-        progress: &multi_progress,
-        packages_progress: &packages,
-        semaphore: &semaphore,
-        registry_client: &registry_client,
-        skip_strict_reference_versions: cmd.skip_strict_reference_versions,
-        existing_resources_behaviour: cmd.existing_resources,
-        errors_output: &errors_output,
-        start_time: chrono::Local::now(),
-    };
-
-    match cmd.r#type {
+    let name = match cmd.r#type {
         InstallType::Package => {
-            installer::install_package_by_name(ctx, cmd.name.clone()).await?;
+            let [name] = cmd.name.as_slice() else {
+                bail!("Only one package may be supplied at a time");
+            };
+            installer::process_package_by_name(&ctx, name).await?;
+            name
         }
         InstallType::Directory => {
-            installer::process_directory(ctx, &PathBuf::from(cmd.name.clone())).await?;
+            let [name] = cmd.name.as_slice() else {
+                bail!("Only one directory may be supplied at a time");
+            };
+            installer::process_directory(&ctx, &PathBuf::from(name)).await?;
+            name
         }
-    }
-    installer::print_report(ctx, &cmd.name);
+        InstallType::File => {
+            installer::process_file(&ctx, &cmd.name).await?;
+            PLACEHOLDER_PACKAGE_NAME
+        }
+    };
+    installer::print_report(&ctx, name);
 
     Ok(())
 }
@@ -211,54 +249,89 @@ pub async fn check(
     client: FhirClient,
     errors_output: LogsOutput,
 ) -> anyhow::Result<()> {
-    let multi_progress = MultiProgress::new();
-    let semaphore = Semaphore::new(5);
-
-    let packages = Mutex::new(HashMap::new());
-    let registry_client = RegistryClient::new(cmd.registry);
-
-    let ctx = InstallContext {
-        fhir_client: &client,
-        action: installer::Action::Install,
-        progress: &multi_progress,
-        packages_progress: &packages,
-        semaphore: &semaphore,
-        registry_client: &registry_client,
-        skip_strict_reference_versions: cmd.skip_strict_reference_versions,
-        existing_resources_behaviour: cmd.existing_resources,
-        errors_output: &errors_output,
-        start_time: chrono::Local::now(),
-    };
+    let registry_client = RegistryClient::new(cmd.registry.clone());
+    let ctx = install_ctx(
+        &cmd,
+        Action::Check,
+        &client,
+        &registry_client,
+        &errors_output,
+    );
 
     match cmd.r#type {
         InstallType::Package => {
-            installer::check_package_installed(ctx, &registry_client, &cmd.name).await?;
+            let [name] = cmd.name.as_slice() else {
+                bail!("Only one package may be supplied at a time");
+            };
+            installer::process_package_by_name(&ctx, name).await?;
         }
         InstallType::Directory => {
-            todo!()
+            let [name] = cmd.name.as_slice() else {
+                bail!("Only one directory may be supplied at a time");
+            };
+            installer::process_directory(&ctx, &PathBuf::from(name)).await?;
+        }
+        InstallType::File => {
+            installer::process_file(&ctx, &cmd.name).await?;
         }
     }
 
     Ok(())
 }
 
+fn install_ctx<'a>(
+    cmd: &PackageCommand,
+    action: Action,
+    fhir_client: &'a FhirClient,
+    registry_client: &'a RegistryClient,
+    errors_output: &'a LogsOutput,
+) -> PackageContext<'a> {
+    let multi_progress = MultiProgress::new();
+    let semaphore = Semaphore::new(5);
+
+    let packages = Mutex::new(HashMap::new());
+
+    PackageContext {
+        fhir_client,
+        action,
+        progress: multi_progress,
+        packages_progress: Arc::new(packages),
+        semaphore: Arc::new(semaphore),
+        registry_client,
+        skip_preprocessing: cmd.skip_preprocessing,
+        skip_strict_reference_versions: cmd.skip_strict_reference_versions,
+        skip_dependencies: cmd.skip_dependencies,
+        existing_resources_behaviour: cmd.existing_resources,
+        parallel_search_requests: cmd.parallel_search_requests,
+        errors_output,
+        start_time: chrono::Local::now(),
+    }
+}
+
 pub async fn tree(cmd: PackageCommand) -> anyhow::Result<()> {
     match cmd.r#type {
         InstallType::Package => {
+            let [name] = cmd.name.as_slice() else {
+                bail!("Only one package may be supplied at a time");
+            };
             let registry_client = RegistryClient::new(cmd.registry);
-            installer::print_tree(&registry_client, &cmd.name, 0).await?;
+            installer::print_tree(&registry_client, name, 0).await?;
         }
         InstallType::Directory => {
             todo!()
         }
+        InstallType::File => bail!("Doesn't make sense with a single file"),
     }
 
     Ok(())
 }
 
 pub async fn info(cmd: PackageCommand) -> anyhow::Result<()> {
+    let [name] = cmd.name.as_slice() else {
+        bail!("Only one package may be supplied at a time");
+    };
     let registry_client = RegistryClient::new(cmd.registry);
-    installer::info(&registry_client, &cmd.name).await
+    installer::info(&registry_client, name).await
 }
 
 pub async fn download(
@@ -266,13 +339,69 @@ pub async fn download(
     client: FhirClient,
     preprocess: bool,
 ) -> anyhow::Result<()> {
+    let [name] = cmd.name.as_slice() else {
+        bail!("Only one package may be supplied at a time");
+    };
+
     let registry_client = RegistryClient::new(cmd.registry);
     installer::download(
         &registry_client,
-        &cmd.name,
+        name,
         client,
         cmd.skip_strict_reference_versions,
         preprocess,
     )
     .await
+}
+
+pub fn generate_completions(cmd: GenerateCompletions) -> anyhow::Result<()> {
+    let shell = match cmd.shell {
+        Some(shell) => shell,
+        None => {
+            let shell = completions::detect_shell()?;
+            eprintln!("Detected {shell} as the current shell");
+            shell
+        }
+    };
+
+    if cmd.install {
+        completions::install_completions(shell).context("Could not install completions")?;
+    } else {
+        clap_complete::generate(
+            shell,
+            &mut Args::command(),
+            Args::command().get_name(),
+            &mut io::stdout(),
+        );
+    }
+
+    Ok(())
+}
+
+pub async fn update(version: Option<String>) -> anyhow::Result<()> {
+    let response = reqwest::get(INSTALL_SCRIPT_URL).await?;
+    let script = response
+        .bytes()
+        .await
+        .context("Could not download installer")?;
+
+    fs::write(INSTALLER_TEMPFILE, script).context("Could not save installer")?;
+
+    let mut command = Command::new("sh");
+    command.arg(INSTALLER_TEMPFILE);
+
+    if let Some(version) = version {
+        command.arg(version);
+    }
+
+    let child = command.spawn()?;
+    let output = child.wait_with_output()?;
+
+    if !output.status.success() {
+        eprintln!("Update failed, see previous logs");
+    }
+
+    fs::remove_file(INSTALLER_TEMPFILE).context("Could not clean up installer")?;
+
+    Ok(())
 }

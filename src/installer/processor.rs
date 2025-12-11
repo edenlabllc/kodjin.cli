@@ -1,19 +1,29 @@
+pub mod resolver;
+
 use super::{
-    package::{FhirPackage, PackageIndex, PackageIndexFile},
+    package::{PackageIndex, PackageIndexFile},
     resource::{Resource, ResourceInfo},
-    Action, InstallContext,
+    Action, PackageContext,
 };
-use crate::client::{FhirClient, FhirError};
+use crate::{
+    args::{ExistingResourceBehaviour, InstallType},
+    client::{FhirClient, FhirError},
+    installer::{
+        print_check_status,
+        processor::resolver::sort_resources_by_dependencies,
+        progress::{InstallProgress, InstallState},
+        resource::is_resource_changed,
+    },
+};
 use anyhow::{anyhow, Context};
 use console::style;
 use futures::{stream, StreamExt, TryStreamExt};
 use indexmap::IndexMap;
 use indicatif::{ProgressBar, ProgressStyle};
 use serde_json::Value;
-use std::time::Duration;
+use std::{sync::Mutex, time::Duration};
 use uuid::Uuid;
 
-const CONCURRENT_SEARCH_REQUESTS: usize = 20;
 const RESOURCE_TYPES_ORDER: &[&str] = &[
     "StructureDefinition",
     "SearchParameter",
@@ -22,9 +32,11 @@ const RESOURCE_TYPES_ORDER: &[&str] = &[
     "ConceptMap",
 ];
 
-pub async fn process_resources(
-    ctx: InstallContext<'_>,
+pub async fn process_directory_resources(
+    ctx: &PackageContext<'_>,
     mut resources: IndexMap<String, Vec<Resource>>,
+    current_progress: &Mutex<InstallProgress>,
+    name: &str,
 ) -> usize {
     let count: usize = resources.values().map(|resources| resources.len()).sum();
 
@@ -34,34 +46,115 @@ pub async fn process_resources(
     bar.set_style(ProgressStyle::with_template("{spinner} [{pos}/{len}] {msg}").unwrap());
 
     let mut processed_count = 0;
+    let mut missing_resources = Vec::new();
 
     // First we process resources in the defined order
     for resource_type in RESOURCE_TYPES_ORDER {
         if let Some(resources) = resources.shift_remove(*resource_type) {
-            processed_count += process_resources_type(ctx, resource_type, resources, &bar).await;
+            processed_count += process_resources_type(
+                ctx,
+                resource_type,
+                resources,
+                &bar,
+                current_progress,
+                name,
+                &mut missing_resources,
+            )
+            .await;
         }
     }
 
     // Process remaining resource types which were not in the list
     for (resource_type, resources) in resources.into_iter() {
-        processed_count += process_resources_type(ctx, &resource_type, resources, &bar).await;
+        processed_count += process_resources_type(
+            ctx,
+            &resource_type,
+            resources,
+            &bar,
+            current_progress,
+            name,
+            &mut missing_resources,
+        )
+        .await;
     }
 
+    current_progress.lock().unwrap().state = InstallState::Completed;
     bar.finish_and_clear();
+
+    if ctx.action == Action::Check {
+        let mut grouped_resources: IndexMap<&str, Vec<_>> = IndexMap::new();
+        for resource in &missing_resources {
+            grouped_resources
+                .entry(&resource.info.resource_type)
+                .or_default()
+                .push((
+                    &resource.info,
+                    resource
+                        .source_path
+                        .file_name()
+                        .and_then(|name| name.to_str())
+                        .unwrap_or("<Invalid filename>"),
+                ));
+        }
+
+        let existing = current_progress.lock().unwrap().report.already_existed;
+
+        print_check_status(
+            name,
+            existing,
+            processed_count,
+            InstallType::Directory,
+            &grouped_resources,
+        );
+    }
 
     processed_count
 }
 
 /// Returns the number of resources which were successfully uploaded
 async fn process_resources_type(
-    ctx: InstallContext<'_>,
+    ctx: &PackageContext<'_>,
     resource_type: &str,
     resources: Vec<Resource>,
     bar: &ProgressBar,
+    current_progress: &Mutex<InstallProgress>,
+    pkg_name: &str,
+    missing_resources: &mut Vec<Resource>,
 ) -> usize {
-    let mut count = 0;
+    bar.reset();
+    bar.set_length(resources.len() as u64);
+    bar.set_message(format!("Ordering {resource_type} resources"));
 
-    for resource in resources {
+    let resources = sort_resources_by_dependencies(resource_type, resources);
+
+    bar.set_message(format!("Checking {resource_type} resources"));
+
+    let requests = resources.into_iter().map(|resource| async {
+        let exists = find_installed_resource(ctx.fhir_client, &resource.info).await?;
+
+        bar.inc(1);
+
+        anyhow::Ok((resource, exists))
+    });
+
+    let result = stream::iter(requests)
+        .buffered(ctx.parallel_search_requests)
+        .try_collect::<Vec<_>>()
+        .await;
+
+    let resources = match result {
+        Ok(resources) => resources,
+        Err(err) => {
+            eprintln!("{err:#}");
+            return 0;
+        }
+    };
+
+    bar.reset();
+
+    let mut processed_count = 0;
+
+    for (resource, existing) in resources {
         bar.set_message(format!(
             "{} {resource_type} {}",
             ctx.action.bar_prefix(),
@@ -70,101 +163,159 @@ async fn process_resources_type(
 
         match ctx.action {
             Action::Install => {
-                let exists = check_resource_installed(ctx.fhir_client, &resource.info)
-                    .await
-                    .unwrap_or_else(|err| {
+                let source_path = resource.source_path.clone();
+                let current_index = PackageIndex::default();
+                match process_resource(
+                    ctx,
+                    resource_type,
+                    resource,
+                    &current_index,
+                    pkg_name,
+                    bar,
+                    existing,
+                )
+                .await
+                {
+                    Ok(result) => {
+                        processed_count += 1;
+                        current_progress
+                            .lock()
+                            .unwrap()
+                            .report
+                            .add_install_result(result);
+                    }
+                    Err(err) => {
                         bar.suspend(|| {
-                            println!("Could not check if resource exists: {err:#}");
-                            false
-                        })
-                    });
-
-                if !exists {
-                    let source_path = resource.source_path.clone();
-                    let current_index = PackageIndex::default();
-                    match process_resource(
-                        ctx,
-                        resource_type,
-                        resource,
-                        &current_index,
-                        "local",
-                        bar,
-                    )
-                    .await
-                    {
-                        Ok(()) => count += 1,
-                        Err(err) => {
-                            bar.suspend(|| {
-                                let msg = format!(
-                                    "Warning: could not process file {source_path:?}: {err:#}",
-                                );
-                                println!("{}", style(msg).yellow())
-                            });
-                        }
+                            let msg = format!(
+                                "Warning: could not process file {source_path:?}: {err:#}",
+                            );
+                            println!("{}", style(msg).yellow());
+                        });
+                        current_progress.lock().unwrap().report.errors += 1;
                     }
                 }
             }
-            Action::Uninstall => match ctx
-                .fhir_client
-                .delete(resource_type, &resource.info.id)
-                .await
-            {
-                Ok(()) => {
-                    count += 1;
-                }
-                Err(err) => {
-                    bar.suspend(|| {
-                        let msg = format!(
-                            "Warning: could not delete resource {resource_type}/{}: {err:#}",
-                            resource.info.id
-                        );
-                        println!("{}", style(msg).yellow())
-                    });
+            Action::Uninstall => match existing {
+                Some(existing) => match ctx.fhir_client.delete(resource_type, &existing.id).await {
+                    Ok(()) => {
+                        bar.suspend(|| {
+                            println!(
+                                "Deleted {resource_type} {}",
+                                style(resource.info.canonical_url().unwrap_or(existing.id)).bold()
+                            );
+                        });
+                        processed_count += 1;
+                        current_progress.lock().unwrap().report.removed += 1;
+                    }
+                    Err(err) => {
+                        bar.suspend(|| {
+                            let msg = format!(
+                                "Warning: could not delete resource {resource_type}/{}: {err:#}",
+                                resource.info.id
+                            );
+                            println!("{}", style(msg).yellow());
+                        });
+                        current_progress.lock().unwrap().report.errors += 1;
+                    }
+                },
+                None => {
+                    processed_count += 1;
                 }
             },
+            Action::Check => {
+                match existing {
+                    Some(_) => {
+                        current_progress.lock().unwrap().report.already_existed += 1;
+                    }
+                    None => {
+                        missing_resources.push(resource);
+                    }
+                }
+                processed_count += 1;
+            }
         }
 
         bar.inc(1);
     }
 
-    count
+    processed_count
 }
 
 pub async fn process_resource(
-    ctx: InstallContext<'_>,
+    ctx: &PackageContext<'_>,
     resource_type: &str,
     mut resource: Resource,
     current_index: &PackageIndex,
     current_package: &str,
     bar: &ProgressBar,
-) -> Result<(), FhirError> {
-    preprocess_resource(
-        &mut resource,
-        ctx.fhir_client,
-        ctx.skip_strict_reference_versions,
-        resource_type,
-        current_index,
-        bar,
-    )
-    .await?;
+    existing_resource: Option<ExistingResource>,
+) -> Result<InstallResult, FhirError> {
+    if ctx.existing_resources_behaviour == ExistingResourceBehaviour::Skip
+        && existing_resource.is_some()
+    {
+        return Ok(InstallResult::Skipped);
+    }
 
-    ctx.fhir_client
-        .upsert(resource_type, &resource.info.id, &resource.data)
+    if !ctx.skip_preprocessing {
+        preprocess_resource(
+            &mut resource,
+            ctx.fhir_client,
+            ctx.skip_strict_reference_versions,
+            resource_type,
+            current_index,
+            bar,
+        )
         .await?;
+    }
+
+    let result = if let Some(existing_resource) = existing_resource {
+        let ExistingResource {
+            id,
+            data: existing_data,
+        } = existing_resource;
+
+        resource.set_id(id);
+
+        if ctx.existing_resources_behaviour == ExistingResourceBehaviour::Overwrite
+            || is_resource_changed(existing_data, resource.data.clone())
+        {
+            ctx.fhir_client
+                .upsert(resource_type, &resource.info.id, &resource.data)
+                .await?;
+            InstallResult::Updated
+        } else {
+            InstallResult::Skipped
+        }
+    } else {
+        ctx.fhir_client
+            .upsert(resource_type, &resource.info.id, &resource.data)
+            .await?;
+
+        InstallResult::Created
+    };
 
     bar.suspend(|| {
-        print!(
-            "[{}] Created {resource_type} ",
-            style(current_package).bold()
-        );
-        if let Some(url) = &resource.info.url {
-            println!("{}", style(url).bold());
-        } else {
-            println!("{}", style(resource.source_path.display()).bold());
+        if result != InstallResult::Skipped {
+            print!(
+                "[{}] {result:?} {resource_type} ",
+                style(current_package).bold()
+            );
+            if let Some(url) = &resource.info.url {
+                println!("{}", style(url).bold());
+            } else {
+                println!("{}", style(resource.source_path.display()).bold());
+            }
         }
     });
 
-    Ok(())
+    Ok(result)
+}
+
+#[derive(Debug, PartialEq)]
+pub enum InstallResult {
+    Created,
+    Updated,
+    Skipped,
 }
 
 /// Returns true if the resource was altered in any way
@@ -289,53 +440,49 @@ fn normalize_profile_reference(reference: &mut String, current_index: &PackageIn
     true
 }
 
-pub async fn check_package_installed(
-    package: &FhirPackage,
+pub async fn check_package_installed<'a>(
+    package_index: &'a PackageIndex,
     client: &FhirClient,
     total_progress: &ProgressBar,
-) -> anyhow::Result<PackageInstallStatus> {
-    let index = package.read_index()?;
-
+    parallel_search_requests: usize,
+) -> anyhow::Result<PackageInstallStatus<'a>> {
     total_progress.reset();
-    total_progress.set_length(index.files.len() as u64);
+    total_progress.set_length(package_index.files.len() as u64);
     total_progress.set_message("Checking resources");
 
-    let requests = index.files.into_iter().map(|file| async {
-        let exists = check_resource_installed(client, &file.resource_info).await?;
+    let requests = package_index.files.iter().map(|file| async move {
+        let existing = find_installed_resource(client, &file.resource_info).await?;
 
         total_progress.inc(1);
 
-        anyhow::Ok((file, exists))
+        anyhow::Ok((file, existing))
     });
 
-    let missing = stream::iter(requests)
-        .buffer_unordered(CONCURRENT_SEARCH_REQUESTS)
-        .try_filter(|(_, exists)| {
-            let exists = *exists;
-            async move { !exists }
-        })
-        .map_ok(|(file, _)| file)
-        .try_collect::<Vec<_>>()
-        .await?;
+    let mut stream = stream::iter(requests).buffer_unordered(parallel_search_requests);
+
+    let mut resources = Vec::with_capacity(package_index.files.len());
+
+    while let Some((file, existing_resource)) = stream.try_next().await? {
+        resources.push((file, existing_resource));
+    }
 
     total_progress.reset();
 
-    if missing.is_empty() {
-        Ok(PackageInstallStatus::Installed)
-    } else {
-        Ok(PackageInstallStatus::NotInstalled(missing))
-    }
+    Ok(resources)
 }
 
-pub enum PackageInstallStatus {
-    Installed,
-    NotInstalled(Vec<PackageIndexFile>),
+pub type PackageInstallStatus<'a> = Vec<(&'a PackageIndexFile, Option<ExistingResource>)>;
+
+pub struct ExistingResource {
+    pub id: String,
+    pub data: Value,
 }
 
-async fn check_resource_installed(
+/// Returns the ids of existing resources
+pub(super) async fn find_installed_resource(
     client: &FhirClient,
     resource_info: &ResourceInfo,
-) -> anyhow::Result<bool> {
+) -> anyhow::Result<Option<ExistingResource>> {
     let mut search_params: Vec<(&str, &str)> = vec![];
     if let Some(url) = &resource_info.url {
         search_params.push(("url", url));
@@ -348,20 +495,36 @@ async fn check_resource_installed(
     }
 
     let bundle = client
-        .search::<ResourceInfo>(&resource_info.resource_type, &search_params)
+        .search::<Value>(&resource_info.resource_type, &search_params)
         .await
         .context("Could not search currently installed resources")?;
 
-    let exists = bundle.entry.iter().any(|entry| {
-        entry.resource.as_ref().is_some_and(|resource| {
-            (resource.url.is_some()
-                && resource.url == resource_info.url
-                && resource.version == resource_info.version)
-                || (resource_info.url.is_none() && resource.id == resource_info.id)
-        })
-    });
+    let existing_resource = bundle
+        .entry
+        .into_iter()
+        .filter_map(|entry| entry.resource)
+        .find_map(|data| {
+            let url = data.get("url").and_then(Value::as_str);
+            let version = data.get("version").and_then(Value::as_str);
+            let id = data
+                .get("id")
+                .and_then(Value::as_str)
+                .expect("Server returned resource without a valid id")
+                .to_owned();
 
-    Ok(exists)
+            let matches = (url.is_some()
+                && url == resource_info.url.as_deref()
+                && version == resource_info.version.as_deref())
+                || (resource_info.url.is_none() && id == resource_info.id);
+
+            if matches {
+                Some(ExistingResource { id, data })
+            } else {
+                None
+            }
+        });
+
+    Ok(existing_resource)
 }
 
 #[cfg(test)]
