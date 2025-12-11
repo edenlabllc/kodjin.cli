@@ -1,6 +1,12 @@
 site_name: Kodjin CLI Documentation
 site_description: The Kodjin CLI is a command-line tool designed to simplify the process of downloading, installing, and managing FHIR Implementation Guides (IGs) for FHIR servers.
 copyright: © EDENLAB. ALL RIGHTS RESERVED, 2021 - 2025
+
+# Repo Information
+repo_name: edenlabllc/kodjin.cli
+repo_url: https://github.com/edenlabllc/kodjin.cli
+
+#Theme
 theme:
   custom_dir: docs/theme_overwrites_home
   logo: assets/logo.svg
@@ -19,6 +25,7 @@ theme:
   font:
     text: Montserrat
 nav:
+- Home: index.md
 - Documentation: 
   - About Kodjin CLI: about-kodjin-cli.md
   - Installation: installation.md
@@ -37,7 +44,7 @@ nav:
     - download: command-download.md
     - generate-completions: command-generate-completions.md
     - help: command-help.md
-  - FAQ: faq.md
+# - FAQ: faq.md
 - Changelog: changelog.md
 
 extra:

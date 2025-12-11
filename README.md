@@ -12,6 +12,13 @@ Whether you're setting up a new FHIR server, updating an existing one, or experi
 
 Full documentation is available at https://edenlabllc.github.io/kodjin.cli/latest/.
 
+## Installation
+
+Linux/Mac: 
+```curl
+curl https://edenlabllc-kodjin-cli.s3.eu-north-1.amazonaws.com/kodjin-cli/installer.sh | sh -
+```
+
 ## License
 
 Kodjin-cli is open source software (OSS) licensed under the [Apache 2.0 License](https://github.com/edenlabllc/kodjin.cli/blob/master/LICENSE).
