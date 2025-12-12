@@ -1,4 +1,4 @@
-## Release v0.1.9
+## Release v0.2.0
 Dec 11, 2025
 
 - Initial release

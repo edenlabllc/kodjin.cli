@@ -143,7 +143,7 @@ When installing packages, kodjin-cli performs several updates to conformance res
 - Generating missing snapshots for StructureDefinition resources.
 - Making references in StructureDefinition resources version-specific within the package.
 
-By using --skip-strict-reference-versions, the Kodjin CLI does not enforce version-specific references, potentially allowing references to resolve more flexibly.
+By using --skip-strict-reference-versions, Kodjin CLI does not enforce version-specific references, potentially allowing references to resolve more flexibly.
 
 **Examples:**
 ```shell
