@@ -16,7 +16,7 @@ pub struct Bundle<T> {
     // pub timestamp: Option<String>,
 }
 
-#[derive(Debug, Deserialize, Clone, Copy)]
+/*#[derive(Debug, Deserialize, Clone, Copy)]
 #[serde(rename_all = "kebab-case")]
 pub enum BundleType {
     Document,
@@ -28,7 +28,7 @@ pub enum BundleType {
     History,
     Searchset,
     Collection,
-}
+}*/
 
 #[derive(Debug, Deserialize, Default, Clone, PartialEq)]
 #[serde(rename_all = "camelCase")]

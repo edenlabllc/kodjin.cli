@@ -1,0 +1,71 @@
+# This is an example .goreleaser.yml file with some sensible defaults.
+# Make sure to check the documentation at https://goreleaser.com
+
+# The lines below are called `modelines`. See `:help modeline`
+# Feel free to remove those if you don't want/need to use them.
+# yaml-language-server: $schema=https://goreleaser.com/static/schema.json
+# vim: set ts=2 sw=2 tw=0 fo=cnqoj
+
+version: 2
+
+builds:
+  - builder: rust
+    flags:
+      - --release
+    targets:
+      - x86_64-unknown-linux-musl
+      - x86_64-pc-windows-gnu
+      - aarch64-unknown-linux-musl
+      - aarch64-apple-darwin
+      - x86_64-apple-darwin
+
+archives:
+  - formats: [tar.gz]
+    id: kodjin-cli
+    # this name template makes the OS and Arch compatible with the results of `uname`.
+    name_template: >-
+      {{ .ProjectName }}_
+      {{- title .Os }}_
+      {{- if eq .Arch "amd64" }}x86_64
+      {{- else if eq .Arch "386" }}i386
+      {{- else }}{{ .Arch }}{{ end }}
+    # use zip for windows archives
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+
+blobs:
+  - bucket: edenlabllc-kodjin-cli
+    provider: s3
+    region: eu-north-1
+    ids:
+      - kodjin-cli
+
+  # Also upload as `latest`
+  - bucket: edenlabllc-kodjin-cli
+    provider: s3
+    region: eu-north-1
+    directory: "{{ .ProjectName }}/latest"
+    ids:
+      - kodjin-cli
+
+  - bucket: edenlabllc-kodjin-cli
+    provider: s3
+    region: eu-north-1
+    directory: "{{ .ProjectName }}"
+    extra_files:
+      - glob: ./installer.sh
+    extra_files_only: true
+
+release:
+  replace_existing_artifacts: true
+  footer: >-
+
+    ---

@@ -1,8 +1,8 @@
+use crate::storage::logs_dir;
 use clap::{Parser, Subcommand, ValueEnum};
 use clap_complete::Shell;
 use std::{convert::Infallible, fmt, path::PathBuf, str::FromStr};
-
-use crate::storage::logs_dir;
+use strum::Display;
 
 /// Kodjin management CLI
 ///
@@ -24,6 +24,14 @@ pub struct Args {
     /// The default one will be used if not specified.
     #[clap(short, long)]
     pub server: Option<String>,
+    /// Additional header to be sent to the FHIR server.
+    #[clap(short = 'H', long)]
+    pub header: Vec<String>,
+    /// Specify authentication type
+    #[clap(short, long)]
+    pub auth: Option<Auth>,
+    #[clap(flatten)]
+    pub auth_options: AuthOptions,
     /// Skip TLS certificate validation
     #[clap(long, default_value_t = false)]
     pub insecure_certificates: bool,
@@ -60,9 +68,12 @@ pub enum CliCommand {
     Download {
         /// Perform resource preprocessing that is normally done before installation
         ///
-        /// Currently does the following:
+        /// Currently this does the following:
+        ///
         /// - Generates new resource ids for canonical resources (ones that have a url and version present)
+        ///
         /// - Generates snapshots for StructureDefinition resources where they are missing
+        ///
         /// - Makes references to other profiles within the current package in StructureDefinition resources version-specific
         #[clap(long, default_value_t = false)]
         preprocess: bool,
@@ -71,6 +82,37 @@ pub enum CliCommand {
     },
     /// Generate command autocompletions
     GenerateCompletions(GenerateCompletions),
+    /// Update `kodjin-cli`
+    Update {
+        /// Version to update to (default: latest)
+        version: Option<String>,
+    },
+}
+
+#[derive(Parser, Debug, Clone)]
+pub struct AuthOptions {
+    /// Username for authorization
+    #[clap(short, long)]
+    pub user: Option<String>,
+    /// Password for authorization
+    #[clap(short, long)]
+    pub password: Option<String>,
+    /// Bearer token for authorization
+    #[clap(short, long)]
+    pub bearer: Option<String>,
+
+    /// Oauth token URL
+    #[clap(long)]
+    pub token_url: Option<String>,
+    /// Oauth client ID
+    #[clap(long)]
+    pub client_id: Option<String>,
+    /// Oauth client secret
+    #[clap(long)]
+    pub client_secret: Option<String>,
+    /// Oauth scopes
+    #[clap(long)]
+    pub scope: Vec<String>,
 }
 
 #[derive(Subcommand, Clone, Debug)]
@@ -80,6 +122,10 @@ pub enum ServerCommand {
     /// Add a new FHIR server with the provided URL
     Add {
         url: String,
+        /// Override the url used for get and search operations.
+        /// By default, the main url is used.
+        #[clap(short, long)]
+        search_url: Option<String>,
         #[clap(short, long)]
         name: Option<String>,
     },
@@ -91,14 +137,19 @@ pub enum ServerCommand {
 
 #[derive(Parser, Clone, Debug)]
 pub struct GenerateCompletions {
+    /// Manually specify what shell to install completions for
     #[arg(value_enum)]
-    pub shell: Shell,
+    pub shell: Option<Shell>,
+    /// Automatically install completion files for the current/selected shell
+    #[clap(short, long, default_value_t = false)]
+    pub install: bool,
 }
 
 #[derive(Parser, Clone, Debug)]
 pub struct PackageCommand {
-    /// Item to process
-    pub name: String,
+    /// Items to process
+    #[clap(required = true)]
+    pub name: Vec<String>,
     /// Type of the item
     #[clap(value_enum, short, long, default_value_t)]
     pub r#type: InstallType,
@@ -114,18 +165,38 @@ pub struct PackageCommand {
     /// keep them as-is instead
     #[clap(long, default_value_t = false)]
     pub skip_strict_reference_versions: bool,
+    /// Do not automatically install package dependencies
+    #[clap(long, default_value_t = false)]
+    pub skip_dependencies: bool,
+    /// How many search requests can be performed in parallel when checking package files
+    #[clap(long, default_value_t = 10)]
+    pub parallel_search_requests: usize,
+    /// Skip resource preprocessing.
+    /// This can be useful if you want to e.g. keep original resource IDs.
+    ///
+    /// Currently preprocessing does the following:
+    ///
+    /// - Generates new resource ids for canonical resources (ones that have a url and version present)
+    ///
+    /// - Generates snapshots for StructureDefinition resources where they are missing
+    ///
+    /// - Makes references to other profiles within the current package in StructureDefinition resources version-specific
+    #[clap(long, default_value_t = false)]
+    pub skip_preprocessing: bool,
 }
 
-#[derive(ValueEnum, Clone, Copy, Debug, Default)]
+#[derive(ValueEnum, Clone, Copy, Debug, Default, PartialEq)]
 pub enum ExistingResourceBehaviour {
     /// Skip existing resources
     #[default]
     Skip,
-    /// Overwrite existing resources
+    /// Update existing resources if they are different from what's being installed
+    Sync,
+    /// Always overwrite existing resources
     Overwrite,
 }
 
-#[derive(Clone, Copy, Debug, Default, ValueEnum)]
+#[derive(Clone, Copy, Debug, Default, ValueEnum, Display)]
 pub enum InstallType {
     /// FHIR Package from a registry
     #[default]
@@ -133,6 +204,18 @@ pub enum InstallType {
     /// Local directory
     #[value(alias("local"), alias("dir"))]
     Directory,
+    /// Single local file
+    File,
+}
+
+#[derive(Clone, Copy, Debug, ValueEnum, Display)]
+pub enum Auth {
+    /// HTTP Basic Auth
+    Basic,
+    /// Bearer Token
+    Bearer,
+    /// Oauth2 (Client Credentials flow)
+    Oauth,
 }
 
 #[derive(Clone, Debug, Default)]
