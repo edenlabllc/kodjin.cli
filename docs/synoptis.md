@@ -1,6 +1,6 @@
 # Synopsis
 
-The Kodjin-cli follows a simple syntax pattern:
+Kodjin CLI follows a simple syntax pattern:
 
 ```shell
 kodjin-cli [OPTIONS] <COMMAND> [OPTIONS]

@@ -1,6 +1,6 @@
 # Command auto-completion
 
-The Kodjin-cli includes a command auto-completion feature that enables you to use the **Tab** key to complete a partially entered command.
+Kodjin CLI includes a command auto-completion feature that enables you to use the **Tab** key to complete a partially entered command.
 
 How to activate?
 Use [generate-completions](./command-generate-completions.md) to activate auto-completion.

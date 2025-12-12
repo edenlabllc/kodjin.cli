@@ -372,7 +372,7 @@ kodjin-cli --help
 
 ## -V, --version
 
-Dislays the current version of the kodjin-cli, that is installed locally
+Dislays the current version of Kodjin CLI, that is installed locally
 
 **Usage: **
 ```shell

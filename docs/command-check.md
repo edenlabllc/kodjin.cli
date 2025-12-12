@@ -16,7 +16,7 @@ Check if a package is installed on the default server
 ```
 In response kodjin-cli will return conformance resources that are missing
 <details>
-<summary> Response from the kodjin-cli to the check command</summary>
+<summary> Response from Kodjin CLI to the check command</summary>
 
 ```shell
     ⠁ hl7.fhir.us.core@4.0.0: Fetching package info
