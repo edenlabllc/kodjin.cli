@@ -10,12 +10,11 @@ The security team and community take all security vulnerabilities seriously.
 Thank you for improving the security of our open source software. 
 We appreciate your efforts and responsible disclosure and will make every effort to acknowledge your contributions.
 
-Report security vulnerabilities by notifying the team specified in [CODEOWNERS](https://github.com/edenlabllc/kodjin.cli/blob/master/docs/CODEOWNERS).
+**Please report security vulnerabilities by creating an issue on our GitHub repository.**
 
-The lead maintainers will acknowledge your email and send a more detailed response indicating the next steps in handling your report. 
-After the initial reply to your report, the security team will endeavor to keep you informed of the progress towards a fix and full announcement, and may ask for additional information or guidance.
+Do not include sensitive details about the vulnerability in the public issue. 
 
-Report security vulnerabilities in third-party modules to the person or team maintaining the module.
+We will do our best to keep you informed of the progress towards a fix, and may ask for additional information or guidance.
 
 ## Disclosure Policy
 
