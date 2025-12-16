@@ -1,0 +1,62 @@
+site_name: Kodjin CLI Documentation
+site_description: Kodjin CLI is a command-line tool designed to simplify the process of downloading, installing, and managing FHIR Implementation Guides (IGs) for FHIR servers.
+copyright: © EDENLAB. ALL RIGHTS RESERVED, 2021 - 2025
+
+# Repo Information
+repo_name: edenlabllc/kodjin.cli
+repo_url: https://github.com/edenlabllc/kodjin.cli
+
+#Theme
+theme:
+  custom_dir: docs/theme_overwrites_home
+  logo: assets/logo.svg
+  favicon: assets/favicon.svg
+  name: material
+  features:
+    - navigation.instant
+    - navigation.tracking
+    - navigation.sections
+    - navigation.indexes
+    - navigation.tabs
+    - navigation.top
+  palette:
+    primary: grey
+    accent: deep orange
+  font:
+    text: Montserrat
+nav:
+- Home: index.md
+- Documentation: 
+  - About Kodjin CLI: about-kodjin-cli.md
+  - Installation: installation.md
+  - Synopsis: synoptis.md
+  - Command auto-completion: command-auto-completion.md
+  - Global options: global-options.md
+  - Commands: 
+    - server: command-server.md
+    - metadata: command-metadata.md
+    - install: command-install.md
+    - uninstall: command-uninstall.md
+    - check: command-check.md
+    - tree: command-tree.md
+    - info: command-info.md
+    - download: command-download.md
+    - generate-completions: command-generate-completions.md
+    - help: command-help.md
+# - FAQ: faq.md
+- Changelog: changelog.md
+
+extra:
+  social:
+    - icon: fontawesome/brands/linkedin
+      link: https://www.linkedin.com/company/edenlab-it/
+    - icon: fontawesome/brands/facebook
+      link: https://www.facebook.com/edenlabIT
+    - icon: fontawesome/brands/twitter
+      link: https://twitter.com/EdenlabIT
+markdown_extensions:
+  - pymdownx.superfences # https://squidfunk.github.io/mkdocs-material/extensions/pymdown/#superfences
+  - admonition
+
+extra_css:
+    - stylesheets/extra.css

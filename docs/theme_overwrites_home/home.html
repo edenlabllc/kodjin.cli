@@ -1,0 +1,292 @@
+<!-- Custom HTML site displayed as the Home chapter -->
+
+{% extends "main.html" %}
+
+{% block head %}
+{{ super() }}
+<meta name="description" content="Explore instructions for commands, operations, examples, and other information on how to work with the Kodjin FHIR Server.">
+{% endblock %}
+
+{% block tabs %}
+{{ super() }}
+<style>
+
+    .md-main {
+        flex-grow: 0;
+        flex: 1;
+    }
+
+    .md-main__inner {
+        display: flex;
+        height: 100%;
+        
+    }
+
+    .md-container {
+        background: radial-gradient(90% 70% at 120% 60%,#FF7515 25%,transparent 79%);
+    }
+
+    .tx-container {
+        padding-top: .0rem;
+
+    }
+
+    .tx-hero {
+        margin-top: 40px 2.8rem;
+        margin-left: auto;
+        max-width: 61rem;
+        color: var(--md-default-fg-color--lighter);
+        justify-content: left;
+    }
+
+    .tx-hero h1 {
+        color: var(--md-accent-fg-color);
+        font-weight: 600;
+        line-height: 57px;
+        font-size: 48px;
+        margin: 0px;
+    }   
+    .tx-hero__content {
+        margin: 0 auto;
+    }
+
+    .tx-hero__image{
+        width:17rem;
+        height:17rem;
+        order:1;
+        padding-right: 2.5rem;
+    }
+
+    .tx-hero .md-button {
+        margin-top: .5rem;
+        margin-right: .5rem;
+        color: #000000;
+        border-radius: 12px;
+    }
+
+    .tx-hero .md-button--primary {
+        background-color: #000000;
+        color:   #FFFFFF;
+        border-color: #ff6a0000;
+        border-radius: 12px;
+    }
+
+    .tx-hero .md-button:focus,
+    .tx-hero .md-button:hover {
+        background-color: #ff6a00c8;
+        color:   var(--md-accent-bg-color);
+        border-color: #ff6a0000;
+    }
+
+    .feature-item h2 svg {
+        height: 58px;
+        float: left;
+    }
+
+    .top-hr {
+        margin-top: 42px;
+    }
+
+    .feature-item {
+        font-weight: 300;
+        border-radius: 24px;
+        background-color: var(--md-primary-fg-color);
+        box-sizing: border-box;
+        padding-left: 72px;
+        padding-right: 72px;
+        padding-top: 40px;
+        padding-bottom: 40px;
+        margin-right: 10px;
+        word-break: break-word
+    }
+
+    .feature-item h2 {
+        color: #000000;
+        font-weight: 600;
+        font-size: 32px;
+        line-height: 40px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        line-height: normal;
+        margin-top: 16px;
+    }
+
+    .feature-item p {
+        font-size: 18px;
+        font-weight: 500;
+        line-height: 21px;
+        text-rendering: optimizeLegibility;
+        -webkit-font-smoothing: antialiased;
+        color: #111;
+        margin: 0 0 10px;
+        display: block;
+    }
+
+    @media screen and (max-width:30em) {
+        .tx-hero h1 {
+            font-size: 1.4rem
+        }
+    }
+
+    @media screen and (min-width:60em) {
+        .md-sidebar--secondary {
+            display: none
+        }
+
+        .tx-hero {
+            display: flex;
+            align-items: center;
+            justify-content: left;
+        }
+
+        .tx-hero__content {
+            max-width: 40rem;
+            margin-top: 1.5rem;
+            margin-bottom: 0;
+            margin-left: 0rem;
+            margin-right: 13rem;
+            align-items: left;
+        }
+    }
+
+    @media screen and (min-width:76.25em) {
+        .md-sidebar--primary {
+            display: none
+        }
+
+        .top-hr {
+            width: 100%;
+            display: flex;
+            max-width: 61rem;
+            margin-right: auto;
+            margin-left: auto;
+            padding: 0 .2rem;
+        }
+
+        .bottom-hr {
+            margin-top: 10px;
+            width: 100%;
+            display: flex;
+            max-width: 61rem;
+            margin-right: auto;
+            margin-left: auto;
+            padding: 0 .2rem;
+        }
+
+        .feature-item {
+            display: block;
+            flex: 1;
+            min-width: 0;
+        }
+    }
+
+    .hr {
+        border-bottom: 1px solid #eee;
+        width: 100%;
+        margin: 20px 0;
+    }
+
+    .text-center {
+        text-align: center;
+        padding-right: 15px;
+        padding-left: 15px;
+        margin-right: auto;
+        margin-left: auto;
+        margin-top: 15px;
+        font-size: 23px;
+        font-weight: 300;
+        padding-bottom: 10px;
+    }
+
+    .logos {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-flow: row wrap;
+        margin: 0 auto;
+    }
+
+    .logos img {
+        flex: 1 1 auto;
+        padding: 25px;
+        max-height: 130px;
+        vertical-align: middle;
+    }
+
+    .hr-logos {
+        margin-top: 0;
+        margin-bottom: 30px;
+    }
+
+    .md-footer-meta__inner {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        margin-top: 1.0rem;
+    }
+
+    .md-footer-social {
+        padding-top: 20px;
+    }
+</style>
+
+
+
+<!-- Main site Entry button descriptions -->
+<section id="home_slider" style="background: none;background-size: cover;background-position: right;">
+    <div class="md-grid md-typeset">
+      <div class="tx-hero">
+        <!--<div class="tx-hero__image">
+          <img src="assets/product-layers.png" draggable="false">
+        </div>-->
+        <div class="tx-hero__content">
+            <h1  style="color: #000000; ">Kodjin CLI Documentation</h1>
+
+            <p>
+                <img src="https://img.shields.io/github/v/release/edenlabllc/kodjin.cli.svg?style=for-the-badge" alt="Release">
+                <img src="https://img.shields.io/github/license/edenlabllc/kodjin.cli.svg?style=for-the-badge" alt="License">
+                <img src="https://img.shields.io/badge/powered%20by-edenlab-8A2BE2.svg?style=for-the-badge" alt="Powered by Edenlab">
+            </p>
+
+            <p>
+                The <code>Kodjin CLI</code> is a powerful and user-friendly command-line tool designed to streamline
+                the management of FHIR Implementation Guides (IGs) for FHIR servers. It automates downloading,
+                installing, and maintaining IGs, including their complex dependency chains.
+            </p>
+            <p>
+                Whether you're setting up a FHIR server, updating an installation, or experimenting with IGs,
+                Kodjin CLI simplifies and accelerates the workflow.
+            </p>
+
+            <h2>License</h2>
+            <p>
+                Kodjin-cli is open source software (OSS) licensed under the
+                <a href="https://github.com/edenlabllc/kodjin.cli/blob/master/LICENSE">Apache 2.0 License</a>.
+            </p>
+
+            <h2>Code of Conduct</h2>
+            <p>
+                This project adheres to the Contributor Covenant
+                <a href="https://github.com/edenlabllc/rmk/blob/master/docs/CODE_OF_CONDUCT.md">Code of Conduct</a>.
+                <br/>
+                Please refer to our
+                <a href="https://github.com/edenlabllc/kodjin.cli/blob/master/docs/CONTRIBUTING.md">Contributing Guidelines</a>
+                for further information.
+            </p>
+
+            <a href="{{ page.next_page.url | url }}" title="{{ page.next_page.title | striptags }}" class="md-button md-button--primary">
+            Kodjin CLI Documentation
+            </a>
+             <a href="https://kodjin.com" title="About Kodjin Interoperability Suite" class="md-button">
+            Back to main 
+            </a>
+
+        </div>
+      </div>
+
+
+</section>
+
+{% endblock %}
+{% block content %}{% endblock %}

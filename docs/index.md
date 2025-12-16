@@ -1,4 +1,10 @@
-# Kodjin-cli 
+---
+title: Home
+template: home.html
+---
+
+
+# Kodjin CLI Documentation
 
 [![Release](https://img.shields.io/github/v/release/edenlabllc/kodjin.cli.svg?style=for-the-badge)](https://github.com/edenlabllc/kodjin.cli/releases/latest)
 [![Software License](https://img.shields.io/github/license/edenlabllc/kodjin.cli.svg?style=for-the-badge)](https://github.com/edenlabllc/kodjin.cli/blob/master/LICENSE)
@@ -10,25 +16,3 @@ One of the standout features of Kodjin CLI is its ability to handle the intricat
 
 Whether you're setting up a new FHIR server, updating an existing one, or experimenting with different IGs to meet specific use cases, Kodjin CLI simplifies the entire process. It empowers healthcare IT professionals to efficiently manage their FHIR ecosystem, promoting consistency, reliability, and adherence to the latest standards in healthcare interoperability.
 
-Full documentation is available at https://edenlabllc.github.io/kodjin.cli/latest/.
-
-## Installation
-
-Linux/Mac: 
-```curl
-curl https://edenlabllc-kodjin-cli.s3.eu-north-1.amazonaws.com/kodjin-cli/installer.sh | sh -
-```
-
-## License
-
-Kodjin-cli is open source software (OSS) licensed under the [Apache 2.0 License](https://github.com/edenlabllc/kodjin.cli/blob/master/LICENSE).
-
-
-## Code of Conduct
-
-This project adheres to the Contributor
-Covenant [Сode of Сonduct](https://github.com/edenlabllc/rmk/blob/master/docs/CODE_OF_CONDUCT.md).
-By participating, you are expected to uphold this code.
-
-Please refer to our [Contributing Guidelines](https://github.com/edenlabllc/kodjin.cli/blob/master/docs/CONTRIBUTING.md) for
-further information.
