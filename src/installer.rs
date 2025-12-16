@@ -9,7 +9,7 @@ const BASE_PACKAGE: &str = "hl7.fhir.r4.core";
 pub const PLACEHOLDER_PACKAGE_NAME: &str = "local";
 
 use crate::{
-    args::{ExistingResourceBehaviour, InstallType, LogsOutput},
+    args::{ExistingResourceBehaviour, InstallType, LogsOutput, PackageCommand},
     client::{operation_outcome::OperationOutcome, FhirClient, FhirError},
     installer::processor::{
         find_installed_resource, resolver::get_resources_order, ExistingResource,
@@ -1186,4 +1186,27 @@ struct JsonLogMessage<'a> {
     pub url: Option<&'a str>,
     pub version: Option<&'a str>,
     pub id: Option<&'a str>,
+}
+
+impl PackageCommand {
+    pub fn get_install_type(&self) -> InstallType {
+        match self.r#type {
+            Some(t) => t,
+            None => {
+                if let [name] = self.name.as_slice() {
+                    if let Ok(metadata) = fs::metadata(name) {
+                        if metadata.file_type().is_dir() {
+                            println!("Processing {} as a local directory", style(name).bold());
+                            return InstallType::Directory;
+                        } else if metadata.file_type().is_file() {
+                            println!("Processing {} as a local file", style(name).bold());
+                            return InstallType::File;
+                        }
+                    }
+                }
+
+                InstallType::Package
+            }
+        }
+    }
 }

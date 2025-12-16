@@ -180,7 +180,7 @@ pub async fn install(
         &errors_output,
     );
 
-    let name = match cmd.r#type {
+    let name = match cmd.get_install_type() {
         InstallType::Package => {
             let [name] = cmd.name.as_slice() else {
                 bail!("Only one package may be supplied at a time");
@@ -219,7 +219,7 @@ pub async fn uninstall(
         &errors_output,
     );
 
-    let name = match cmd.r#type {
+    let name = match cmd.get_install_type() {
         InstallType::Package => {
             let [name] = cmd.name.as_slice() else {
                 bail!("Only one package may be supplied at a time");
@@ -258,7 +258,7 @@ pub async fn check(
         &errors_output,
     );
 
-    match cmd.r#type {
+    match cmd.get_install_type() {
         InstallType::Package => {
             let [name] = cmd.name.as_slice() else {
                 bail!("Only one package may be supplied at a time");
@@ -309,7 +309,7 @@ fn install_ctx<'a>(
 }
 
 pub async fn tree(cmd: PackageCommand) -> anyhow::Result<()> {
-    match cmd.r#type {
+    match cmd.get_install_type() {
         InstallType::Package => {
             let [name] = cmd.name.as_slice() else {
                 bail!("Only one package may be supplied at a time");

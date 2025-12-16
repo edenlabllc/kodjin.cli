@@ -151,8 +151,8 @@ pub struct PackageCommand {
     #[clap(required = true)]
     pub name: Vec<String>,
     /// Type of the item
-    #[clap(value_enum, short, long, default_value_t)]
-    pub r#type: InstallType,
+    #[clap(value_enum, short, long)]
+    pub r#type: Option<InstallType>,
     /// Registry URL for FHIR packages
     #[clap(short, long, default_value = "https://packages.simplifier.net")]
     pub registry: String,
