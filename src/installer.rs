@@ -564,7 +564,7 @@ pub async fn process_directory(ctx: &PackageContext<'_>, root_path: &Path) -> an
 
         let processed_count =
             processor::process_directory_resources(ctx, resources, &current_progress, &pkg_name)
-                .await;
+                .await?;
 
         println!(
             "Processed {} resources in {}",
@@ -628,7 +628,7 @@ pub async fn process_file(ctx: &PackageContext<'_>, files: &[String]) -> anyhow:
         &current_progress,
         PLACEHOLDER_PACKAGE_NAME,
     )
-    .await;
+    .await?;
 
     if let Some(dir) = ctx.errors_output.get_dir() {
         println!(
