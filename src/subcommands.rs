@@ -416,10 +416,15 @@ pub async fn reindex(client: FhirClient) -> anyhow::Result<()> {
         .ok_or_else(|| anyhow::anyhow!("Reindex response missing 'id' parameter"))?
         .to_owned();
 
-    bar.set_message(format!("Reindex started (id: {id}), waiting for completion..."));
+    bar.set_message(format!(
+        "Reindex started (id: {id}), waiting for completion..."
+    ));
 
+    const MIN_STATUS_CHECK_INTERVAL: Duration = Duration::from_secs(5);
+    const MAX_STATUS_CHECK_INTERVAL: Duration = Duration::from_secs(30);
+    let mut status_check_interval = MIN_STATUS_CHECK_INTERVAL;
     loop {
-        tokio::time::sleep(Duration::from_secs(2)).await;
+        tokio::time::sleep(status_check_interval).await;
 
         let status_result = client.get_reindex_status(&id).await?;
         let status = status_result
@@ -427,14 +432,24 @@ pub async fn reindex(client: FhirClient) -> anyhow::Result<()> {
             .ok_or_else(|| anyhow::anyhow!("Reindex status response missing 'status' parameter"))?
             .to_owned();
 
-        if status == "completed" {
-            bar.finish_and_clear();
-            println!("Reindex {} completed successfully", style(id).bold());
-            return Ok(());
+        match status.as_str() {
+            "completed" => {
+                bar.finish_and_clear();
+                println!("Reindex {} completed successfully", style(id).bold());
+                return Ok(());
+            }
+            "error" => {
+                bar.finish_and_clear();
+                bail!("Reindex {} failed with error status", id);
+            }
+            _ => {}
         }
 
+        status_check_interval = std::cmp::min(status_check_interval * 2, MAX_STATUS_CHECK_INTERVAL);
+
         bar.set_message(format!(
-            "Reindex in progress (id: {id}), status: {status}..."
+            "Reindex in progress (id: {id}), status: {status}, checking status in {} seconds...",
+            status_check_interval.as_secs()
         ));
     }
 }

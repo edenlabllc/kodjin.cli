@@ -9,7 +9,7 @@ pub struct Parameters {
 pub struct Parameter {
     pub name: String,
     #[serde(rename = "valueString")]
-    pub value_string: String,
+    pub value_string: Option<String>,
 }
 
 impl Parameters {
@@ -17,6 +17,6 @@ impl Parameters {
         self.parameter
             .iter()
             .find(|p| p.name == name)
-            .map(|p| p.value_string.as_str())
+            .and_then(|p| p.value_string.as_deref())
     }
 }
