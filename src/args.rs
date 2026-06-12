@@ -87,6 +87,8 @@ pub enum CliCommand {
         /// Version to update to (default: latest)
         version: Option<String>,
     },
+    /// Trigger a reindex of all resources on the FHIR server
+    Reindex,
 }
 
 #[derive(Parser, Debug, Clone)]

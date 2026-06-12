@@ -60,6 +60,10 @@ async fn run(args: Args) -> anyhow::Result<()> {
         }
         CliCommand::GenerateCompletions(cmd) => subcommands::generate_completions(cmd),
         CliCommand::Update { version } => subcommands::update(version).await,
+        CliCommand::Reindex => {
+            let client = get_client(&config, &args).await?;
+            subcommands::reindex(client).await
+        }
     }
 }
 

@@ -405,3 +405,36 @@ pub async fn update(version: Option<String>) -> anyhow::Result<()> {
 
     Ok(())
 }
+
+pub async fn reindex(client: FhirClient) -> anyhow::Result<()> {
+    let bar = ProgressBar::new_spinner().with_message("Starting reindex");
+    bar.enable_steady_tick(Duration::from_millis(100));
+
+    let result = client.start_reindex().await?;
+    let id = result
+        .get_value("id")
+        .ok_or_else(|| anyhow::anyhow!("Reindex response missing 'id' parameter"))?
+        .to_owned();
+
+    bar.set_message(format!("Reindex started (id: {id}), waiting for completion..."));
+
+    loop {
+        tokio::time::sleep(Duration::from_secs(2)).await;
+
+        let status_result = client.get_reindex_status(&id).await?;
+        let status = status_result
+            .get_value("status")
+            .ok_or_else(|| anyhow::anyhow!("Reindex status response missing 'status' parameter"))?
+            .to_owned();
+
+        if status == "completed" {
+            bar.finish_and_clear();
+            println!("Reindex {} completed successfully", style(id).bold());
+            return Ok(());
+        }
+
+        bar.set_message(format!(
+            "Reindex in progress (id: {id}), status: {status}..."
+        ));
+    }
+}

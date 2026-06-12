@@ -3,6 +3,9 @@ mod capability_statement;
 mod codeable_concept;
 mod coding;
 pub mod operation_outcome;
+mod parameters;
+
+pub use parameters::Parameters;
 
 use anyhow::{anyhow, Context};
 use bundle::Bundle;
@@ -146,6 +149,24 @@ impl FhirClient {
             .error_for_status()?
             .json()
             .await?)
+    }
+
+    pub async fn start_reindex(&self) -> Result<Parameters, FhirError> {
+        let body = serde_json::json!({ "resourceType": "Parameters" });
+        let response = self
+            .request(Method::POST, "/$reindex")
+            .json(&body)
+            .send()
+            .await?;
+        Ok(handle_response_error(response).await?.json().await?)
+    }
+
+    pub async fn get_reindex_status(&self, id: &str) -> Result<Parameters, FhirError> {
+        let response = self
+            .request(Method::GET, &format!("/reindex/{id}"))
+            .send()
+            .await?;
+        Ok(handle_response_error(response).await?.json().await?)
     }
 }
 
