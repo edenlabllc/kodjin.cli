@@ -41,6 +41,7 @@ nav:
     - tree: command-tree.md
     - info: command-info.md
     - download: command-download.md
+    - reindex: command-reindex.md
     - generate-completions: command-generate-completions.md
     - help: command-help.md
 # - FAQ: faq.md

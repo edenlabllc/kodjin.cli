@@ -54,7 +54,7 @@ pub enum CliCommand {
     /// Show FHIR server metadata
     Metadata,
     /// Install a FHIR package
-    Install(PackageCommand),
+    Install(InstallCommand),
     /// Uninstall a FHIR package
     #[command(alias = "remove")]
     Uninstall(PackageCommand),
@@ -87,6 +87,17 @@ pub enum CliCommand {
         /// Version to update to (default: latest)
         version: Option<String>,
     },
+    /// Trigger a reindex of all resources on the FHIR server
+    Reindex,
+}
+
+#[derive(Parser, Clone, Debug)]
+pub struct InstallCommand {
+    /// Trigger a reindex after package installation completes
+    #[clap(long, default_value_t = false)]
+    pub reindex: bool,
+    #[clap(flatten)]
+    pub package_args: PackageCommand,
 }
 
 #[derive(Parser, Debug, Clone)]

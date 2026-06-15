@@ -61,7 +61,10 @@ pub async fn download_package_to(
 ) -> anyhow::Result<FhirPackage> {
     bar.enable_steady_tick(Duration::from_millis(100));
 
-    let tarball_url = &version_info.dist.context("Package does not specify a 'dist' field")?.tarball;
+    let tarball_url = &version_info
+        .dist
+        .context("Package does not specify a 'dist' field")?
+        .tarball;
 
     let response = registry_client
         .client
