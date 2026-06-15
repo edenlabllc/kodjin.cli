@@ -252,10 +252,10 @@ Options:
           - directory: Local directory
           - file:      Single local file
 
-  -r, --reindex
+      --reindex
           Trigger a reindex after package installation completes
 
-  -g, --registry <REGISTRY>
+  -r, --registry <REGISTRY>
           Registry URL for FHIR packages
 
           [default: https://packages.simplifier.net]
