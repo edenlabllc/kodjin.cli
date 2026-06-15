@@ -39,7 +39,11 @@ async fn run(args: Args) -> anyhow::Result<()> {
         }
         CliCommand::Install(cmd) => {
             let client = get_client(&config, &args).await?;
-            subcommands::install(cmd, client, args.errors_output).await
+            subcommands::install(cmd.package_args, &client, args.errors_output).await?;
+            if cmd.reindex {
+                subcommands::reindex(&client).await?;
+            }
+            Ok(())
         }
         CliCommand::Uninstall(cmd) => {
             let client = get_client(&config, &args).await?;
@@ -62,7 +66,7 @@ async fn run(args: Args) -> anyhow::Result<()> {
         CliCommand::Update { version } => subcommands::update(version).await,
         CliCommand::Reindex => {
             let client = get_client(&config, &args).await?;
-            subcommands::reindex(client).await
+            subcommands::reindex(&client).await
         }
     }
 }

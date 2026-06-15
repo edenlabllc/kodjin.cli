@@ -168,14 +168,14 @@ pub async fn metadata(client: FhirClient) -> anyhow::Result<()> {
 
 pub async fn install(
     cmd: PackageCommand,
-    client: FhirClient,
+    client: &FhirClient,
     errors_output: LogsOutput,
 ) -> anyhow::Result<()> {
     let registry_client = RegistryClient::new(cmd.registry.clone());
     let ctx = install_ctx(
         &cmd,
         Action::Install,
-        &client,
+        client,
         &registry_client,
         &errors_output,
     );
@@ -406,7 +406,7 @@ pub async fn update(version: Option<String>) -> anyhow::Result<()> {
     Ok(())
 }
 
-pub async fn reindex(client: FhirClient) -> anyhow::Result<()> {
+pub async fn reindex(client: &FhirClient) -> anyhow::Result<()> {
     let bar = ProgressBar::new_spinner().with_message("Starting reindex");
     bar.enable_steady_tick(Duration::from_millis(100));
 
