@@ -17,6 +17,15 @@ kodjin-cli install hl7.fhir.us.core@4.0.0
 
 Options:
 
+## --reindex
+
+Triggers the `reindex` command automatically after a successful install.
+
+**Examples:**
+```shell
+kodjin-cli install --reindex hl7.fhir.us.core@4.0.0
+```
+
 ## --type
 
 The --type option specifies the source type of the FHIR package when using the install command. It allows users to install packages either from the official FHIR package registry or from a local directory.
@@ -242,6 +251,9 @@ Options:
           - package:   FHIR Package from a registry
           - directory: Local directory
           - file:      Single local file
+
+      --reindex
+          Trigger a reindex after package installation completes
 
   -r, --registry <REGISTRY>
           Registry URL for FHIR packages

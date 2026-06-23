@@ -54,7 +54,6 @@ nav:
   - download: command-download.md
   - generate-completions: command-generate-completions.md
   - help: command-help.md
-# - FAQ: faq.md
 - Changelog: changelog.md
 
 extra:

@@ -9,10 +9,11 @@ use crate::{
     args::{ExistingResourceBehaviour, InstallType},
     client::{FhirClient, FhirError},
     installer::{
-        print_check_status,
+        log_resource_error, print_check_status,
         processor::resolver::sort_resources_by_dependencies,
         progress::{InstallProgress, InstallState},
         resource::is_resource_changed,
+        ErrorsWriter,
     },
 };
 use anyhow::{anyhow, Context};
@@ -21,7 +22,7 @@ use futures::{stream, StreamExt, TryStreamExt};
 use indexmap::IndexMap;
 use indicatif::{ProgressBar, ProgressStyle};
 use serde_json::Value;
-use std::{sync::Mutex, time::Duration};
+use std::{path::Path, sync::Mutex, time::Duration};
 use uuid::Uuid;
 
 const RESOURCE_TYPES_ORDER: &[&str] = &[
@@ -37,7 +38,7 @@ pub async fn process_directory_resources(
     mut resources: IndexMap<String, Vec<Resource>>,
     current_progress: &Mutex<InstallProgress>,
     name: &str,
-) -> usize {
+) -> anyhow::Result<usize> {
     let count: usize = resources.values().map(|resources| resources.len()).sum();
 
     let bar = ProgressBar::new(count as u64)
@@ -60,7 +61,7 @@ pub async fn process_directory_resources(
                 name,
                 &mut missing_resources,
             )
-            .await;
+            .await?;
         }
     }
 
@@ -75,7 +76,7 @@ pub async fn process_directory_resources(
             name,
             &mut missing_resources,
         )
-        .await;
+        .await?;
     }
 
     current_progress.lock().unwrap().state = InstallState::Completed;
@@ -108,7 +109,7 @@ pub async fn process_directory_resources(
         );
     }
 
-    processed_count
+    Ok(processed_count)
 }
 
 /// Returns the number of resources which were successfully uploaded
@@ -120,10 +121,12 @@ async fn process_resources_type(
     current_progress: &Mutex<InstallProgress>,
     pkg_name: &str,
     missing_resources: &mut Vec<Resource>,
-) -> usize {
+) -> anyhow::Result<usize> {
     bar.reset();
     bar.set_length(resources.len() as u64);
     bar.set_message(format!("Ordering {resource_type} resources"));
+
+    let mut errors_writer = ErrorsWriter::from_ctx(ctx, pkg_name)?;
 
     let resources = sort_resources_by_dependencies(resource_type, resources);
 
@@ -146,7 +149,7 @@ async fn process_resources_type(
         Ok(resources) => resources,
         Err(err) => {
             eprintln!("{err:#}");
-            return 0;
+            return Ok(0);
         }
     };
 
@@ -185,12 +188,14 @@ async fn process_resources_type(
                             .add_install_result(result);
                     }
                     Err(err) => {
-                        bar.suspend(|| {
-                            let msg = format!(
-                                "Warning: could not process file {source_path:?}: {err:#}",
-                            );
-                            println!("{}", style(msg).yellow());
-                        });
+                        log_resource_error(
+                            &mut errors_writer,
+                            err,
+                            &source_path,
+                            pkg_name,
+                            bar,
+                            None,
+                        );
                         current_progress.lock().unwrap().report.errors += 1;
                     }
                 }
@@ -208,13 +213,20 @@ async fn process_resources_type(
                         current_progress.lock().unwrap().report.removed += 1;
                     }
                     Err(err) => {
-                        bar.suspend(|| {
-                            let msg = format!(
-                                "Warning: could not delete resource {resource_type}/{}: {err:#}",
-                                resource.info.id
-                            );
-                            println!("{}", style(msg).yellow());
-                        });
+                        log_resource_error(
+                            &mut errors_writer,
+                            err,
+                            Path::new(&format!("{resource_type}/{}", existing.id)),
+                            pkg_name,
+                            bar,
+                            Some(&ResourceInfo {
+                                resource_type: resource_type.to_owned(),
+                                id: existing.id,
+                                url: None,
+                                version: None,
+                            }),
+                        );
+
                         current_progress.lock().unwrap().report.errors += 1;
                     }
                 },
@@ -238,7 +250,7 @@ async fn process_resources_type(
         bar.inc(1);
     }
 
-    processed_count
+    Ok(processed_count)
 }
 
 pub async fn process_resource(

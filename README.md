@@ -10,7 +10,7 @@ One of the standout features of Kodjin CLI is its ability to handle the intricat
 
 Whether you're setting up a new FHIR server, updating an existing one, or experimenting with different IGs to meet specific use cases, Kodjin CLI simplifies the entire process. It empowers healthcare IT professionals to efficiently manage their FHIR ecosystem, promoting consistency, reliability, and adherence to the latest standards in healthcare interoperability.
 
-Full documentation is available at https://edenlabllc.github.io/kodjin.cli/latest/.
+Full documentation is available at https://edenlabllc.github.io/kodjin.cli/.
 
 ## Installation
 

@@ -168,19 +168,19 @@ pub async fn metadata(client: FhirClient) -> anyhow::Result<()> {
 
 pub async fn install(
     cmd: PackageCommand,
-    client: FhirClient,
+    client: &FhirClient,
     errors_output: LogsOutput,
 ) -> anyhow::Result<()> {
     let registry_client = RegistryClient::new(cmd.registry.clone());
     let ctx = install_ctx(
         &cmd,
         Action::Install,
-        &client,
+        client,
         &registry_client,
         &errors_output,
     );
 
-    let name = match cmd.r#type {
+    let name = match cmd.get_install_type() {
         InstallType::Package => {
             let [name] = cmd.name.as_slice() else {
                 bail!("Only one package may be supplied at a time");
@@ -219,7 +219,7 @@ pub async fn uninstall(
         &errors_output,
     );
 
-    let name = match cmd.r#type {
+    let name = match cmd.get_install_type() {
         InstallType::Package => {
             let [name] = cmd.name.as_slice() else {
                 bail!("Only one package may be supplied at a time");
@@ -258,7 +258,7 @@ pub async fn check(
         &errors_output,
     );
 
-    match cmd.r#type {
+    match cmd.get_install_type() {
         InstallType::Package => {
             let [name] = cmd.name.as_slice() else {
                 bail!("Only one package may be supplied at a time");
@@ -309,7 +309,7 @@ fn install_ctx<'a>(
 }
 
 pub async fn tree(cmd: PackageCommand) -> anyhow::Result<()> {
-    match cmd.r#type {
+    match cmd.get_install_type() {
         InstallType::Package => {
             let [name] = cmd.name.as_slice() else {
                 bail!("Only one package may be supplied at a time");
@@ -404,4 +404,52 @@ pub async fn update(version: Option<String>) -> anyhow::Result<()> {
     fs::remove_file(INSTALLER_TEMPFILE).context("Could not clean up installer")?;
 
     Ok(())
+}
+
+pub async fn reindex(client: &FhirClient) -> anyhow::Result<()> {
+    let bar = ProgressBar::new_spinner().with_message("Starting reindex");
+    bar.enable_steady_tick(Duration::from_millis(100));
+
+    let result = client.start_reindex().await?;
+    let id = result
+        .get_value("id")
+        .ok_or_else(|| anyhow::anyhow!("Reindex response missing 'id' parameter"))?
+        .to_owned();
+
+    bar.set_message(format!(
+        "Reindex started (id: {id}), waiting for completion..."
+    ));
+
+    const MIN_STATUS_CHECK_INTERVAL: Duration = Duration::from_secs(5);
+    const MAX_STATUS_CHECK_INTERVAL: Duration = Duration::from_secs(30);
+    let mut status_check_interval = MIN_STATUS_CHECK_INTERVAL;
+    loop {
+        tokio::time::sleep(status_check_interval).await;
+
+        let status_result = client.get_reindex_status(&id).await?;
+        let status = status_result
+            .get_value("status")
+            .ok_or_else(|| anyhow::anyhow!("Reindex status response missing 'status' parameter"))?
+            .to_owned();
+
+        match status.as_str() {
+            "completed" => {
+                bar.finish_and_clear();
+                println!("Reindex {} completed successfully", style(id).bold());
+                return Ok(());
+            }
+            "error" => {
+                bar.finish_and_clear();
+                bail!("Reindex {} failed with error status", id);
+            }
+            _ => {}
+        }
+
+        status_check_interval = std::cmp::min(status_check_interval * 2, MAX_STATUS_CHECK_INTERVAL);
+
+        bar.set_message(format!(
+            "Reindex in progress (id: {id}), status: {status}, checking status in {} seconds...",
+            status_check_interval.as_secs()
+        ));
+    }
 }
