@@ -1,6 +1,6 @@
 # generate-completions
 
-Kodjin-cli supports auto-completion for basic commands. Currently `bash`, `fish`, `powershell` and `zsh` shells are supported. To make Auto-completion works, you have to generates the completion file.
+Kodjin-cli supports auto-completion for basic commands. Currently `bash`, `fish`, `powershell` and `zsh` shells are supported. To make Auto-completion works, you have to generate the completion file..
 
 How to use auto-completions is written in [Command auto-completion](./command-auto-completion.md)
 

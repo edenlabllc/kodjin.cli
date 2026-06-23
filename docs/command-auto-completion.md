@@ -5,7 +5,7 @@ Kodjin CLI includes a command auto-completion feature that enables you to use th
 How to activate?
 Use [generate-completions](./command-generate-completions.md) to activate auto-completion.
 
-!!! note "Auto-completion could be already installed"
+!!! note "Auto-completion should already be installed"
 
 How it works?
 
