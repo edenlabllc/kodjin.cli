@@ -66,4 +66,4 @@ Parallel server requests during install and check operations are configurable vi
 ## Where to go next
 
 - [Installation](installation.md) — Get Kodjin CLI installed on your machine
-- [Uses examples ](examples.md) — Examples of use cases
+- [First-time setup guide](./guide-first-time-setup.md) — Examples of use cases
