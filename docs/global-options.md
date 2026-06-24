@@ -15,7 +15,7 @@ kodjin-cli --server <server>
 
 **Example:**
 
-In this example we will check what is the default server is and then use for installing IG to the one that is not default
+In this example we will check what is the default server, and then use for installing IG to the one that is not default
 ```shell
 $ kodjin-cli server list
 
