@@ -31,6 +31,11 @@ pub struct FhirClient {
 }
 
 impl FhirClient {
+    const TENANT_ID_HEADER: &'static str = "x-kodjin-metadata-tenant-id";
+    // This header will be deprecated in the future, but we still need to support it for now.
+    const OWNED_BY_HEADER: &'static str = "x-kodjin-metadata-owned-by";
+    const ASTERISK_MULTITENANCY_VALUE: &'static str = "*";
+
     pub async fn new(
         url: String,
         search_url: Option<String>,
@@ -153,17 +158,42 @@ impl FhirClient {
 
     pub async fn start_reindex(&self) -> Result<Parameters, FhirError> {
         let body = serde_json::json!({ "resourceType": "Parameters" });
-        let response = self
-            .request(Method::POST, "/$reindex")
-            .json(&body)
+
+        let mut headers = HeaderMap::new();
+        headers.insert(
+            Self::TENANT_ID_HEADER,
+            Self::ASTERISK_MULTITENANCY_VALUE.parse().unwrap(),
+        );
+        headers.insert(
+            Self::OWNED_BY_HEADER,
+            Self::ASTERISK_MULTITENANCY_VALUE.parse().unwrap(),
+        );
+
+        let request = self.request(Method::POST, "/$reindex").json(&body);
+
+        println!("Sending request to: {:#?}", request);
+
+        let response = request
+            // .headers(headers)
             .send()
             .await?;
         Ok(handle_response_error(response).await?.json().await?)
     }
 
     pub async fn get_reindex_status(&self, id: &str) -> Result<Parameters, FhirError> {
+        let mut headers = HeaderMap::new();
+        headers.insert(
+            Self::TENANT_ID_HEADER,
+            Self::ASTERISK_MULTITENANCY_VALUE.parse().unwrap(),
+        );
+        headers.insert(
+            Self::OWNED_BY_HEADER,
+            Self::ASTERISK_MULTITENANCY_VALUE.parse().unwrap(),
+        );
+
         let response = self
             .request(Method::GET, &format!("/reindex/{id}"))
+            .headers(headers)
             .send()
             .await?;
         Ok(handle_response_error(response).await?.json().await?)
