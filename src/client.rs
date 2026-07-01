@@ -173,10 +173,7 @@ impl FhirClient {
 
         println!("Sending request to: {:#?}", request);
 
-        let response = request
-            // .headers(headers)
-            .send()
-            .await?;
+        let response = request.headers(headers).send().await?;
         Ok(handle_response_error(response).await?.json().await?)
     }
 
