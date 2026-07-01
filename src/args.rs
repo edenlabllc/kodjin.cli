@@ -32,6 +32,13 @@ pub struct Args {
     pub auth: Option<Auth>,
     #[clap(flatten)]
     pub auth_options: AuthOptions,
+    /// Header names used for multitenancy in reindex operations (comma-separated).
+    #[clap(
+        long,
+        value_delimiter = ',',
+        default_value = "x-kodjin-metadata-tenant-id,x-kodjin-metadata-owned-by"
+    )]
+    pub multitenancy_header_names: Vec<String>,
     /// Skip TLS certificate validation
     #[clap(long, default_value_t = false)]
     pub insecure_certificates: bool,

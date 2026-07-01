@@ -28,12 +28,10 @@ pub struct FhirClient {
     base_url: Arc<str>,
     search_url: Arc<str>,
     auth: Option<ConfiguredAuth>,
+    multitenancy_header_names: Vec<String>,
 }
 
 impl FhirClient {
-    const TENANT_ID_HEADER: &'static str = "x-kodjin-metadata-tenant-id";
-    // This header will be deprecated in the future, but we still need to support it for now.
-    const OWNED_BY_HEADER: &'static str = "x-kodjin-metadata-owned-by";
     const ASTERISK_MULTITENANCY_VALUE: &'static str = "*";
 
     pub async fn new(
@@ -67,6 +65,7 @@ impl FhirClient {
             auth: configure_auth(args).await?,
             base_url: url.as_str().into(),
             search_url: search_url.unwrap_or(url).into(),
+            multitenancy_header_names: args.multitenancy_header_names.clone(),
         })
     }
 
@@ -160,18 +159,14 @@ impl FhirClient {
         let body = serde_json::json!({ "resourceType": "Parameters" });
 
         let mut headers = HeaderMap::new();
-        headers.insert(
-            Self::TENANT_ID_HEADER,
-            Self::ASTERISK_MULTITENANCY_VALUE.parse().unwrap(),
-        );
-        headers.insert(
-            Self::OWNED_BY_HEADER,
-            Self::ASTERISK_MULTITENANCY_VALUE.parse().unwrap(),
-        );
+        for name in &self.multitenancy_header_names {
+            headers.insert(
+                HeaderName::from_str(name).map_err(|e| FhirError::Other(e.into()))?,
+                Self::ASTERISK_MULTITENANCY_VALUE.parse().unwrap(),
+            );
+        }
 
         let request = self.request(Method::POST, "/$reindex").json(&body);
-
-        println!("Sending request to: {:#?}", request);
 
         let response = request.headers(headers).send().await?;
         Ok(handle_response_error(response).await?.json().await?)
@@ -179,14 +174,12 @@ impl FhirClient {
 
     pub async fn get_reindex_status(&self, id: &str) -> Result<Parameters, FhirError> {
         let mut headers = HeaderMap::new();
-        headers.insert(
-            Self::TENANT_ID_HEADER,
-            Self::ASTERISK_MULTITENANCY_VALUE.parse().unwrap(),
-        );
-        headers.insert(
-            Self::OWNED_BY_HEADER,
-            Self::ASTERISK_MULTITENANCY_VALUE.parse().unwrap(),
-        );
+        for name in &self.multitenancy_header_names {
+            headers.insert(
+                HeaderName::from_str(name).map_err(|e| FhirError::Other(e.into()))?,
+                Self::ASTERISK_MULTITENANCY_VALUE.parse().unwrap(),
+            );
+        }
 
         let response = self
             .request(Method::GET, &format!("/reindex/{id}"))
