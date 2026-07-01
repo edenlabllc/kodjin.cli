@@ -166,9 +166,12 @@ impl FhirClient {
             );
         }
 
-        let request = self.request(Method::POST, "/$reindex").json(&body);
-
-        let response = request.headers(headers).send().await?;
+        let response = self
+            .request(Method::POST, "/$reindex")
+            .json(&body)
+            .headers(headers)
+            .send()
+            .await?;
         Ok(handle_response_error(response).await?.json().await?)
     }
 
