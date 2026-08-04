@@ -17,9 +17,19 @@ DOWNLOAD_PATH=/tmp/kodjin-cli.tar.gz
 
 curl "${FILE_URL}" -o "${DOWNLOAD_PATH}"
 
-TARGET_PATH="/usr/local/bin"
+TARGET_PATH="${HOME}"/.local/bin
 echo "Extracting binary to ${TARGET_PATH}"
 sudo sh -c "mkdir -p ${TARGET_PATH} && tar xf ${DOWNLOAD_PATH} -C ${TARGET_PATH}"
+
+# Linux case, you need to create a symlink manually due to
+# restrictions on permissions in the /usr/local/bin directory
+if [[ ! -f /usr/local/bin/kodjin-cli ]]; then
+  if ! (ln -s "${TARGET_PATH}"/kodjin-cli /usr/local/bin/kodjin-cli &> /dev/null) then
+    printf "\nWARNING: The symlink was not created automatically, please complete the installation by running the command: %s\n" \
+      "sudo ln -s ${TARGET_PATH}/kodjin-cli /usr/local/bin/kodjin-cli"
+    exit 0
+  fi
+fi
 
 echo "Installing shell completions"
 kodjin-cli generate-completions --install || true
