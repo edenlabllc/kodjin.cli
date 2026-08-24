@@ -39,6 +39,7 @@ nav:
     - Install from a local directory: guide-install-from-local-dir.md
     - Install to a server with authentication: guide-install-to-server-with-aouth.md
     - Install to a non-default server: guide-non-default-server.md
+    - Install from Git Hub repo: guide-install-from-repo.md
   - FAQ: faq.md
 - Commands: 
   - Command auto-completion: command-auto-completion.md
