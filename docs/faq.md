@@ -11,7 +11,7 @@ description: Answers to common questions from new Kodjin CLI users.
 Run the following command on Linux or macOS:
 
 ```shell
-curl https://edenlabllc-kodjin-cli.s3.eu-north-1.amazonaws.com/kodjin-cli/installer.sh | sh -
+curl -fsSL https://edenlabllc-kodjin-cli.s3.eu-north-1.amazonaws.com/kodjin-cli/installer.sh | bash
 ```
 
 After installation, verify it works with:
