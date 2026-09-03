@@ -27,7 +27,7 @@ Kodjin-cli is open source software (OSS) licensed under the [Apache 2.0 License]
 ## Code of Conduct
 
 This project adheres to the Contributor
-Covenant [Сode of Сonduct](https://github.com/edenlabllc/rmk/blob/master/docs/CODE_OF_CONDUCT.md).
+Covenant [Сode of Сonduct](https://github.com/edenlabllc/kodjin.cli/blob/master/docs/CODE_OF_CONDUCT.md).
 By participating, you are expected to uphold this code.
 
 Please refer to our [Contributing Guidelines](https://github.com/edenlabllc/kodjin.cli/blob/master/docs/CONTRIBUTING.md) for
