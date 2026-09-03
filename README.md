@@ -1,4 +1,4 @@
-# Kodjin-cli 
+# Kodjin CLI - FHIR Server Management
 
 [![Release](https://img.shields.io/github/v/release/edenlabllc/kodjin.cli.svg?style=for-the-badge)](https://github.com/edenlabllc/kodjin.cli/releases/latest)
 [![Software License](https://img.shields.io/github/license/edenlabllc/kodjin.cli.svg?style=for-the-badge)](https://github.com/edenlabllc/kodjin.cli/blob/master/LICENSE)
