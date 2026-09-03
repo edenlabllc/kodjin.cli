@@ -1,3 +1,32 @@
 nav:
-  - Documentation: index.md
-collapse: false
+- Home: index.md
+- Getting Started: 
+  - About Kodjin CLI: technical-overview.md
+  - Installation: installation.md
+  - Guides: 
+    - First-time setup: guide-first-time-setup.md
+    - Look up a package before installing: guide-look-up-a-package.md
+    - Install an Implementation Guide: guide-install-an-IG.md
+    - Update a package: guide-update-a-package.md
+    - Save error logs to a file: guide-save-error.md
+    - Download a package for local inspection: guide-download-package.md
+    - Install from a local directory: guide-install-from-local-dir.md
+    - Install to a server with authentication: guide-install-to-server-with-aouth.md
+    - Install to a non-default server: guide-non-default-server.md
+    - Install from Git Hub repo: guide-install-from-repo.md
+  - FAQ: faq.md
+- Commands: 
+  - Command auto-completion: command-auto-completion.md
+  - Synopsis: synoptis.md
+  - Global options: global-options.md
+  - server: command-server.md
+  - metadata: command-metadata.md
+  - install: command-install.md
+  - uninstall: command-uninstall.md
+  - check: command-check.md
+  - tree: command-tree.md
+  - info: command-info.md
+  - download: command-download.md
+  - generate-completions: command-generate-completions.md
+  - help: command-help.md
+- Changelog: changelog.md
