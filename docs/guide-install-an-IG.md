@@ -65,4 +65,4 @@ $ kodjin-cli install hl7.fhir.us.core@4.0.0
 
 - The package is now installed and your server can use it for validation.
 - If you need to update resources that were already installed, see [Update a package](guide-update-a-package.md).
-- If something went wrong and you want to inspect the errors, see [Save error logs](guide-save-errore.md).
+- If something went wrong and you want to inspect the errors, see [Save error logs](guide-save-error.md).
