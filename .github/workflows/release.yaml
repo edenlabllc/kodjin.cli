@@ -1,0 +1,202 @@
+name: Release Kodjin CLI using GoReleaser
+
+on:
+  push:
+    branches:
+      - master
+      - release/*
+      - hotfix/*
+
+permissions:
+  contents: write
+
+env:
+  # AWS region of the AWS account storing the release artifacts in S3.
+  CORE_AWS_REGION: eu-north-1
+
+jobs:
+  goreleaser:
+    name: Release Kodjin CLI using GoReleaser
+    runs-on: ubuntu-24.04
+    container:
+      image: messense/cargo-zigbuild:0.20.0
+
+    steps:
+      - name: Install dependencies
+        run: |
+          apt update
+          apt install -y mingw-w64
+          git config --global --add safe.directory "${PWD}"
+
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Resolve release version
+        shell: bash
+        run: |
+          # constants for selecting branches
+          readonly GIT_BRANCH="${GITHUB_REF_NAME}"
+          readonly GITHUB_ORG="${GITHUB_REPOSITORY_OWNER}"
+
+          function resolve_release_envs() {
+            echo "Git commit message:"
+            GIT_COMMIT_MSG="$(git log -1 --pretty=format:"%s")"
+            echo "${GIT_COMMIT_MSG}"
+
+            if [[ ! "${GIT_COMMIT_MSG}" =~ ^Merge\ pull\ request\ #[0-9]+\ from\ ${GITHUB_ORG}/(hotfix|release)/(v[0-9]+\.[0-9]+\.[0-9]+)$ ]]; then
+              >&2 echo "Pushes to master should be done via merges of PR requests from hotfix/vN.N.N or release/vN.N.N branches only."
+              >&2 echo "The expected message format (will be used for parsing a release tag):"
+              >&2 echo "Merge pull request #N from ${GITHUB_ORG}/hotfix/vN.N.N or ${GITHUB_ORG}/release/vN.N.N."
+              exit 1
+            fi
+
+            VERSION="${BASH_REMATCH[2]}"
+            RELEASE_CANDIDATE="false"
+            echo "DISABLE_BLOB_KODJIN_CLI_RC=true" >> "${GITHUB_ENV}"
+          }
+
+          function resolve_release_candidate_envs() {
+            if [[ ! "${GIT_BRANCH}" =~ ^(hotfix|release)/(v[0-9]+\.[0-9]+\.[0-9]+)$ ]]; then
+              >&2 echo "Release branches should be named hotfix/vN.N.N or release/vN.N.N only."
+              >&2 echo "Got: ${GIT_BRANCH}"
+              exit 1
+            fi
+
+            VERSION="${BASH_REMATCH[2]}-rc"
+            RELEASE_CANDIDATE="true"
+            echo "DISABLE_BLOB_KODJIN_CLI=true" >> "${GITHUB_ENV}"
+          }
+
+          case "${GIT_BRANCH}" in
+            release/*|hotfix/*)
+              resolve_release_candidate_envs
+              ;;
+            master)
+              resolve_release_envs
+              ;;
+          esac
+
+          # The Cargo package version never carries the `v` prefix or the `-rc` suffix:
+          # a release branch prepares the final version, the suffix only marks the artifact.
+          CARGO_EXPECTED_VERSION="${VERSION#v}"
+          CARGO_EXPECTED_VERSION="${CARGO_EXPECTED_VERSION%-rc}"
+
+          echo "Release tag: ${VERSION}"
+          echo "Expected Cargo package version: ${CARGO_EXPECTED_VERSION}"
+
+          {
+            echo "VERSION=${VERSION}"
+            echo "CARGO_EXPECTED_VERSION=${CARGO_EXPECTED_VERSION}"
+            echo "RELEASE_CANDIDATE=${RELEASE_CANDIDATE}"
+          } >> "${GITHUB_ENV}"
+
+      - name: Detect Cargo version drift
+        shell: bash
+        run: |
+          # GoReleaser derives artifact paths from the Git tag, but `kodjin-cli --version`
+          # is compiled from CARGO_PKG_VERSION, so the two can silently diverge.
+          CARGO_TOML_VERSION="$(sed -nE 's/^version[[:space:]]*=[[:space:]]*"([^"]+)".*/\1/p' Cargo.toml | head -1)"
+          CARGO_LOCK_VERSION="$(awk '
+            $0 == "name = \"kodjin-cli\"" { found = 1; next }
+            found && /^version = / { gsub(/"/, "", $3); print $3; exit }
+          ' Cargo.lock)"
+
+          echo "Cargo.toml version: ${CARGO_TOML_VERSION}"
+          echo "Cargo.lock version: ${CARGO_LOCK_VERSION}"
+          echo "Expected version:   ${CARGO_EXPECTED_VERSION}"
+
+          FAILED="false"
+
+          if [[ "${CARGO_TOML_VERSION}" != "${CARGO_EXPECTED_VERSION}" ]]; then
+            >&2 echo "ERROR: Cargo.toml declares version '${CARGO_TOML_VERSION}', but the release tag is 'v${CARGO_EXPECTED_VERSION}'."
+            FAILED="true"
+          fi
+
+          if [[ "${CARGO_LOCK_VERSION}" != "${CARGO_EXPECTED_VERSION}" ]]; then
+            >&2 echo "ERROR: Cargo.lock records version '${CARGO_LOCK_VERSION}', but the release tag is 'v${CARGO_EXPECTED_VERSION}'."
+            FAILED="true"
+          fi
+
+          if [[ "${FAILED}" == "true" ]]; then
+            >&2 echo ""
+            >&2 echo "Bump the version on the release branch before merging:"
+            >&2 echo "  cargo set-version ${CARGO_EXPECTED_VERSION}   # or edit Cargo.toml manually"
+            >&2 echo "  cargo update --workspace                      # refreshes Cargo.lock"
+            exit 1
+          fi
+
+      - name: Collect release notes
+        shell: bash
+        run: |
+          RELEASE_NOTES="$(awk -v header="## Release v${CARGO_EXPECTED_VERSION}" '
+            $0 == header { found = 1; next }
+            found && /^## / { exit }
+            found { print }
+          ' docs/changelog.md)"
+
+          if [[ -z "$(echo "${RELEASE_NOTES}" | tr -d '[:space:]')" ]]; then
+            if [[ "${RELEASE_CANDIDATE}" == "true" ]]; then
+              echo "WARNING: docs/changelog.md has no '## Release v${CARGO_EXPECTED_VERSION}' section yet."
+              RELEASE_NOTES="Release candidate for v${CARGO_EXPECTED_VERSION}, changelog pending."
+            else
+              >&2 echo "ERROR: docs/changelog.md has no '## Release v${CARGO_EXPECTED_VERSION}' section."
+              >&2 echo "Add the section on the release branch before merging to master."
+              exit 1
+            fi
+          fi
+
+          echo "Release notes:"
+          echo "${RELEASE_NOTES}"
+
+          {
+            echo 'RELEASE_NOTES<<RELEASE_NOTES_EOF'
+            echo "${RELEASE_NOTES}"
+            echo 'RELEASE_NOTES_EOF'
+          } >> "${GITHUB_ENV}"
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ env.CORE_AWS_REGION }}
+          aws-access-key-id: ${{ secrets.KODJIN_CLI_AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.KODJIN_CLI_AWS_SECRET_ACCESS_KEY }}
+
+      - name: Set up build cache
+        uses: Swatinem/rust-cache@v2
+
+      - name: Push the release tag
+        shell: bash
+        run: |
+          echo "Configure Git user.name and user.email."
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+
+          # Release candidates are rebuilt on every push to the release branch,
+          # so their tag has to be moved rather than created once.
+          if [[ "${RELEASE_CANDIDATE}" == "true" ]]; then
+            git fetch --tags &> /dev/null
+            if (git tag | grep -Fx "${VERSION}" &> /dev/null); then
+              git tag --delete "${VERSION}"
+              git push --delete origin "${VERSION}"
+            fi
+          elif (git ls-remote --exit-code --tags origin "refs/tags/${VERSION}" &> /dev/null); then
+            >&2 echo "ERROR: Tag ${VERSION} already exists on the remote, refusing to overwrite a published release."
+            exit 1
+          fi
+
+          echo "Add Git tag ${VERSION}."
+          git tag "${VERSION}"
+          git push origin "${VERSION}"
+
+      - name: Run GoReleaser
+        uses: goreleaser/goreleaser-action@v6
+        with:
+          distribution: goreleaser
+          # Rust builder support was added in v2.5. Use a pinned, current v2
+          # release so builds remain reproducible.
+          version: v2.18.0
+          args: release --clean
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

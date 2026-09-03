@@ -3,6 +3,9 @@ set -e
 
 URL="https://edenlabllc-kodjin-cli.s3.eu-north-1.amazonaws.com/kodjin-cli"
 VERSION="${1:-latest}"
+# Version-pinned artifacts are stored under the bare semver, e.g. kodjin-cli/0.2.0,
+# while release tags are v-prefixed. Accept both forms.
+VERSION="${VERSION#v}"
 
 OS=$(uname -s)
 ARCH=$(uname -m)
