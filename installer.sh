@@ -23,8 +23,9 @@ curl --fail --location --retry 3 --retry-delay 1 \
     "${FILE_URL}"
 
 TARGET_PATH="${HOME}"/.local/bin
+mkdir -p "${TARGET_PATH}"
 echo "Extracting binary to ${TARGET_PATH}"
-sudo sh -c "mkdir -p ${TARGET_PATH} && tar xf ${DOWNLOAD_PATH} -C ${TARGET_PATH}"
+tar xf ${DOWNLOAD_PATH} -C ${TARGET_PATH}
 
 # Linux case, you need to create a symlink manually due to
 # restrictions on permissions in the /usr/local/bin directory
