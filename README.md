@@ -16,7 +16,7 @@ Full documentation is available at https://edenlabllc.github.io/kodjin.cli/.
 
 Linux/macOS:
 ```shell
-curl -fsSL https://edenlabllc-kodjin-cli.s3.eu-north-1.amazonaws.com/kodjin-cli/installer.sh | bash
+curl -fsSL https://edenlabllc-kodjin-cli.s3.eu-north-1.amazonaws.com/kodjin-cli/installer.sh | bash -
 ```
 
 ## License

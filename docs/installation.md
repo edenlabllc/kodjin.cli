@@ -7,7 +7,7 @@ description: Kodjin CLI is a command-line tool designed to simplify the process 
 To install or update the version of `kodjin-cli` in the terminal run the command
 
 ```shell
-curl -fsSL https://edenlabllc-kodjin-cli.s3.eu-north-1.amazonaws.com/kodjin-cli/installer.sh | bash
+curl -fsSL https://edenlabllc-kodjin-cli.s3.eu-north-1.amazonaws.com/kodjin-cli/installer.sh | bash -
 ```
 
 ## Update

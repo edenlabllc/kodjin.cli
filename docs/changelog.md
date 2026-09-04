@@ -3,8 +3,7 @@ Sep 03, 2026
 
 - Release pipeline aligned with RMK: create tags from `release/*` / `hotfix/*` merges, publish RC and stable GitHub releases, upload versioned and `latest` / `latest-rc` artifacts to S3
 - Fail the release if `Cargo.toml` / `Cargo.lock` do not match the release tag
-- Installer rewritten: install into `~/.local/bin` without sudo, no `/usr/local/bin` symlink, fail on download errors, warn when another binary shadows the install in `PATH`
-- Install docs and `kodjin-cli update` now use `bash` instead of `sh`
+- Installer download now uses `curl --fail --location` with retries so failed downloads abort instead of installing a broken archive
 
 ## Release v0.2.0
 Sep 03, 2026
