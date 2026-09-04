@@ -270,6 +270,7 @@ async fn configure_auth(args: &Args) -> anyhow::Result<Option<ConfiguredAuth>> {
                 .set_token_uri(TokenUrl::new(token_url)?);
 
             let http_client = reqwest::ClientBuilder::new()
+                .danger_accept_invalid_certs(args.insecure_certificates)
                 .redirect(reqwest::redirect::Policy::none())
                 .build()?;
 
