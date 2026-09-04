@@ -1,0 +1,1320 @@
+<!-- Elements added to main will be displayed on all pages -->
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Kodjin CLI is a command-line tool designed to simplify the process of downloading, installing, and managing FHIR Implementation Guides (IGs) for FHIR servers.">
+      
+      
+      
+        <link rel="canonical" href="https://edenlabllc.github.io/kodjin.cli/v0.2.1/command-help/">
+      
+      
+        <link rel="prev" href="../command-generate-completions/">
+      
+      
+        <link rel="next" href="../changelog/">
+      
+      
+      <link rel="icon" href="../assets/favicon.svg">
+      <meta name="generator" content="mkdocs-1.5.3, mkdocs-material-9.4.6">
+    
+    
+      
+        <title>help - Kodjin CLI Documentation</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.35e1ed30.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.356b1318.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Montserrat:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Montserrat";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../stylesheets/extra.css">
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce((e,_)=>(e<<5)-e+_.charCodeAt(0),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+    
+  </head>
+  
+  
+    
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="grey" data-md-color-accent="deep-orange">
+  
+    
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#command-help" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <div data-md-color-scheme="default" data-md-component="outdated" hidden>
+        
+      </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="Kodjin CLI Documentation" class="md-header__button md-logo" aria-label="Kodjin CLI Documentation" data-md-component="logo">
+      
+  <img src="../assets/logo.svg" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3V6m0 5h18v2H3v-2m0 5h18v2H3v-2Z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Kodjin CLI Documentation
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              help
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+    
+    
+    
+      <label class="md-header__button md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5Z"/></svg>
+      </label>
+      <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5Z"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12Z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41Z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/edenlabllc/kodjin.cli" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.4.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2023 Fonticons, Inc.--><path d="M439.55 236.05 244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81z"/></svg>
+  </div>
+  <div class="md-source__repository">
+    edenlabllc/kodjin.cli
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href=".." class="md-tabs__link">
+        
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../technical-overview/" class="md-tabs__link">
+          
+  
+    
+  
+  Getting Started
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+    
+  
+  
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../command-auto-completion/" class="md-tabs__link">
+          
+  
+    
+  
+  Commands
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../changelog/" class="md-tabs__link">
+        
+  
+    
+  
+  Changelog
+
+      </a>
+    </li>
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="Kodjin CLI Documentation" class="md-nav__button md-logo" aria-label="Kodjin CLI Documentation" data-md-component="logo">
+      
+  <img src="../assets/logo.svg" alt="logo">
+
+    </a>
+    Kodjin CLI Documentation
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/edenlabllc/kodjin.cli" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.4.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2023 Fonticons, Inc.--><path d="M439.55 236.05 244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81z"/></svg>
+  </div>
+  <div class="md-source__repository">
+    edenlabllc/kodjin.cli
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Home
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+      
+      
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
+            
+  
+  <span class="md-ellipsis">
+    Getting Started
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            Getting Started
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../technical-overview/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    About Kodjin CLI
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../installation/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Installation
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+      
+      
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_2_3" id="__nav_2_3_label" tabindex="">
+            
+  
+  <span class="md-ellipsis">
+    Guides
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2_3">
+            <span class="md-nav__icon md-icon"></span>
+            Guides
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guide-first-time-setup/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    First-time setup
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guide-look-up-a-package/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Look up a package before installing
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guide-install-an-IG/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Install an Implementation Guide
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guide-update-a-package/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Update a package
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guide-save-error/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Save error logs to a file
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guide-download-package/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Download a package for local inspection
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guide-install-from-local-dir/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Install from a local directory
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guide-install-to-server-with-aouth/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Install to a server with authentication
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guide-non-default-server/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Install to a non-default server
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guide-install-from-repo/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Install from Git Hub repo
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../faq/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    FAQ
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+      
+      
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  <span class="md-ellipsis">
+    Commands
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            Commands
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../command-auto-completion/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Command auto-completion
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../synoptis/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Synopsis
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../global-options/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Global options
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../command-server/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    server
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../command-metadata/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    metadata
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../command-install/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    install
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../command-uninstall/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    uninstall
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../command-check/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    check
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../command-tree/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    tree
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../command-info/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    info
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../command-download/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    download
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../command-generate-completions/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    generate-completions
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  <span class="md-ellipsis">
+    help
+  </span>
+  
+
+      </a>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../changelog/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Changelog
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+  
+  
+
+
+<h1 id="command-help">Command help</h1>
+<p>Displays help information for kodjin-cli, including available commands, options, and usage examples. This command return the same information as <a href="../global-options/#-h-help">option <code>--help</code></a></p>
+<p><strong>Usage:</strong>
+<div class="highlight"><pre><span></span><code>kodjin-cli<span class="w"> </span><span class="nb">help</span>
+</code></pre></div></p>
+<p><b>Examples:</b></p>
+<div class="highlight"><pre><span></span><code>$<span class="w"> </span>kodjin-cli<span class="w"> </span><span class="nb">help</span>
+Kodjin<span class="w"> </span>management<span class="w"> </span>CLI
+
+Usage<span class="w"> </span>examples:
+$<span class="w"> </span>kodjin-cli<span class="w"> </span>server<span class="w"> </span>add<span class="w"> </span>https://demo.kodjin.com/fhir
+$<span class="w"> </span>kodjin-cli<span class="w"> </span>metadata
+$<span class="w"> </span>kodjin-cli<span class="w"> </span>info<span class="w"> </span>de.gematik.epa
+$<span class="w"> </span>kodjin-cli<span class="w"> </span>install<span class="w"> </span>hl7.fhir.us.core@4.0.0
+$<span class="w"> </span>kodjin-cli<span class="w"> </span>--errors-output<span class="o">=</span>directory<span class="w"> </span>install<span class="w"> </span>hl7.fhir.us.core@4.0.0
+$<span class="w"> </span>kodjin-cli<span class="w"> </span>--server<span class="o">=</span>kodjin-demo<span class="w"> </span>check<span class="w"> </span>hl7.fhir.us.core@4.0.0
+
+For<span class="w"> </span>full<span class="w"> </span>information,<span class="w"> </span>see<span class="w"> </span>--help<span class="w"> </span><span class="k">for</span><span class="w"> </span>each<span class="w"> </span>subcommand.
+
+Usage:<span class="w"> </span>kodjin-cli<span class="w"> </span><span class="o">[</span>OPTIONS<span class="o">]</span><span class="w"> </span>&lt;COMMAND&gt;
+
+Commands:
+<span class="w">  </span>server<span class="w">                </span>Manage<span class="w"> </span>FHIR<span class="w"> </span>server<span class="w"> </span>URLs
+<span class="w">  </span>metadata<span class="w">              </span>Show<span class="w"> </span>FHIR<span class="w"> </span>server<span class="w"> </span>metadata
+<span class="w">  </span>install<span class="w">               </span>Install<span class="w"> </span>a<span class="w"> </span>FHIR<span class="w"> </span>package
+<span class="w">  </span>uninstall<span class="w">             </span>Uninstall<span class="w"> </span>a<span class="w"> </span>FHIR<span class="w"> </span>package
+<span class="w">  </span>check<span class="w">                 </span>Check<span class="w"> </span><span class="k">if</span><span class="w"> </span>a<span class="w"> </span>FHIR<span class="w"> </span>package<span class="w"> </span>is<span class="w"> </span>installed
+<span class="w">  </span>tree<span class="w">                  </span>Print<span class="w"> </span>dependency<span class="w"> </span>tree<span class="w"> </span>of<span class="w"> </span>a<span class="w"> </span>FHIR<span class="w"> </span>package
+<span class="w">  </span>info<span class="w">                  </span>Show<span class="w"> </span>information<span class="w"> </span>about<span class="w"> </span>a<span class="w"> </span>FHIR<span class="w"> </span>package
+<span class="w">  </span>download<span class="w">              </span>Download<span class="w"> </span>a<span class="w"> </span>package<span class="w"> </span>locally
+<span class="w">  </span>generate-completions<span class="w">  </span>Generate<span class="w"> </span><span class="nb">command</span><span class="w"> </span>autocompletions
+<span class="w">  </span><span class="nb">help</span><span class="w">                  </span>Print<span class="w"> </span>this<span class="w"> </span>message<span class="w"> </span>or<span class="w"> </span>the<span class="w"> </span><span class="nb">help</span><span class="w"> </span>of<span class="w"> </span>the<span class="w"> </span>given<span class="w"> </span>subcommand<span class="o">(</span>s<span class="o">)</span>
+
+Options:
+<span class="w">  </span>-s,<span class="w"> </span>--server<span class="w"> </span>&lt;SERVER&gt;
+<span class="w">          </span>Select<span class="w"> </span>which<span class="w"> </span>FHIR<span class="w"> </span>server<span class="w"> </span>to<span class="w"> </span>use.<span class="w"> </span>The<span class="w"> </span>default<span class="w"> </span>one<span class="w"> </span>will<span class="w"> </span>be<span class="w"> </span>used<span class="w"> </span><span class="k">if</span><span class="w"> </span>not<span class="w"> </span>specified
+
+<span class="w">      </span>--insecure-certificates
+<span class="w">          </span>Skip<span class="w"> </span>TLS<span class="w"> </span>certificate<span class="w"> </span>validation
+
+<span class="w">      </span>--request-timeout<span class="w"> </span>&lt;REQUEST_TIMEOUT&gt;
+<span class="w">          </span>Timeout<span class="w"> </span><span class="k">for</span><span class="w"> </span>requests<span class="w"> </span><span class="o">(</span><span class="k">in</span><span class="w"> </span>seconds<span class="o">)</span>
+
+<span class="w">          </span><span class="o">[</span>default:<span class="w"> </span><span class="m">30</span><span class="o">]</span>
+
+<span class="w">      </span>--errors-output<span class="w"> </span>&lt;ERRORS_OUTPUT&gt;
+<span class="w">          </span>Where<span class="w"> </span>errors<span class="w"> </span>should<span class="w"> </span>be<span class="w"> </span>written<span class="w"> </span>to.
+
+<span class="w">          </span>Can<span class="w"> </span>be<span class="w"> </span>either<span class="w"> </span><span class="sb">`</span>stderr<span class="sb">`</span><span class="w"> </span><span class="o">(</span>default<span class="o">)</span>,<span class="w"> </span><span class="sb">`</span>directory<span class="sb">`</span><span class="w"> </span><span class="k">for</span><span class="w"> </span>the<span class="w"> </span>default<span class="w"> </span>logs<span class="w"> </span>directory<span class="w"> </span>or<span class="w"> </span>a<span class="w"> </span>custom<span class="w"> </span>path.
+
+<span class="w">          </span><span class="o">[</span>default:<span class="w"> </span>stderr<span class="o">]</span>
+
+<span class="w">  </span>-h,<span class="w"> </span>--help
+<span class="w">          </span>Print<span class="w"> </span><span class="nb">help</span><span class="w"> </span><span class="o">(</span>see<span class="w"> </span>a<span class="w"> </span>summary<span class="w"> </span>with<span class="w"> </span><span class="s1">&#39;-h&#39;</span><span class="o">)</span>
+
+<span class="w">  </span>-V,<span class="w"> </span>--version
+<span class="w">          </span>Print<span class="w"> </span>version
+</code></pre></div>
+
+  <hr>
+<div class="md-source-file">
+  <small>
+    
+      Last update:
+      <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">February 24, 2025</span>
+      
+    
+  </small>
+</div>
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12Z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+<footer class="md-footer">
+    <div class="md-footer-meta md-typeset">
+        <div class="md-footer-meta__inner md-grid">
+            <!-- Copyright and theme information -->
+            <div class="md-footer-copyright">
+                <svg width="205" height="68" viewBox="0 0 205 68" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <g clip-path="url(#clip0_1021_9147)">
+                    <path d="M47.0792 39.1319C46.5909 35.4489 45.6478 31.8554 44.2754 28.4493C14.4725 30.5705 27.0732 0 27.0732 0C27.0732 0 19.6843 1.72038 13.1407 11.259C6.59711 20.7977 12.1717 38.5194 12.1717 38.5194C4.65914 34.0158 4.17676 22.2388 4.17676 22.2388C0.00402432 33.4978 -0.746448 41.6043 0.630719 47.414C1.80139 53.6649 5.05499 59.2186 9.76092 62.9987C14.4668 66.7789 20.29 68.5162 26.1018 67.8741C31.9137 67.2321 37.3004 64.2562 41.218 59.5234C45.1356 54.7906 47.3051 48.6377 47.306 42.2574C47.3237 41.2099 47.2477 40.1632 47.0792 39.1319Z" fill="white"/>
+                    <path d="M39.9996 23.1756C39.9996 23.1756 43.6404 10.2007 30.0337 8.12903C30.0337 8.12003 25.2095 21.9686 39.9996 23.1756Z" fill="white"/>
+                    <path d="M62.1251 39.0418C62.0881 39.0433 62.0513 39.036 62.0171 39.0205C61.9829 39.0049 61.9522 38.9815 61.9272 38.9517C61.9008 38.9236 61.8798 38.89 61.8656 38.8528C61.8515 38.8157 61.8444 38.7758 61.8447 38.7355V30.3363C61.8443 30.2954 61.8513 30.2547 61.8655 30.2168C61.8796 30.1789 61.9006 30.1445 61.9272 30.1156C61.9529 30.0867 61.9837 30.0639 62.0177 30.0484C62.0517 30.0329 62.0882 30.0251 62.1251 30.0255H63.2219C63.2595 30.0242 63.2969 30.0316 63.3317 30.0471C63.3665 30.0626 63.3979 30.086 63.4239 30.1156C63.4734 30.1762 63.5 30.2551 63.4982 30.3363V38.7355C63.5002 38.8154 63.4736 38.893 63.4239 38.9517C63.3986 38.9823 63.3673 39.0063 63.3323 39.0219C63.2974 39.0375 63.2596 39.0443 63.2219 39.0418H62.1251Z" fill="white"/>
+                    <path d="M67.943 39.0418C67.8686 39.0418 67.7973 39.0095 67.7447 38.9521C67.6922 38.8947 67.6627 38.8168 67.6627 38.7356V30.3498C67.6605 30.3067 67.6667 30.2635 67.6809 30.2231C67.6951 30.1827 67.717 30.1461 67.7451 30.1157C67.7708 30.0868 67.8016 30.0639 67.8356 30.0484C67.8696 30.0329 67.9062 30.0252 67.943 30.0256H68.8378C68.8809 30.0207 68.9245 30.0259 68.9657 30.0406C69.0069 30.0553 69.0448 30.0794 69.0769 30.1111C69.1142 30.1472 69.1474 30.1881 69.1759 30.2328L72.5363 36.0019V30.3498C72.533 30.2643 72.5595 30.1806 72.6106 30.1157C72.6366 30.086 72.668 30.0627 72.7028 30.0471C72.7376 30.0316 72.775 30.0243 72.8126 30.0256H73.7857C73.8245 30.0241 73.8632 30.0314 73.8994 30.0468C73.9355 30.0623 73.9684 30.0858 73.996 30.1157C74.0233 30.1467 74.0446 30.1835 74.0588 30.2237C74.0729 30.2639 74.0796 30.3068 74.0784 30.3498V38.722C74.0798 38.7645 74.0732 38.8067 74.059 38.8462C74.0448 38.8857 74.0233 38.9216 73.996 38.9517C73.9709 38.9815 73.9402 39.005 73.9061 39.0205C73.8719 39.0361 73.8351 39.0433 73.7981 39.0418H72.8868C72.8445 39.0472 72.8018 39.0419 72.7617 39.0263C72.7217 39.0107 72.6855 38.9852 72.6559 38.9517C72.6235 38.9092 72.5877 38.87 72.5487 38.8346L69.2047 33.1961V38.7356C69.2048 38.7769 69.1972 38.8179 69.1823 38.856C69.1674 38.894 69.1456 38.9284 69.1183 38.957C69.0909 38.9857 69.0586 39.0079 69.0231 39.0225C68.9876 39.0371 68.9499 39.0436 68.912 39.0418H67.943Z" fill="white"/>
+                    <path d="M80.3085 39.0418C80.2716 39.043 80.2348 39.0356 80.2007 39.0201C80.1665 39.0046 80.1359 38.9813 80.1106 38.9517C80.0848 38.9235 80.0645 38.8897 80.051 38.8525C80.0375 38.8153 80.0312 38.7755 80.0323 38.7356V31.6109H77.8717C77.7975 31.6102 77.7265 31.5778 77.6738 31.5208C77.6478 31.4917 77.6274 31.4571 77.614 31.4192C77.6005 31.3813 77.5942 31.3408 77.5955 31.3001V30.3498C77.5935 30.3071 77.5994 30.2643 77.6129 30.2241C77.6263 30.1838 77.6471 30.147 77.6738 30.1157C77.7265 30.0586 77.7975 30.0263 77.8717 30.0256H83.8174C83.8563 30.0241 83.895 30.0314 83.9311 30.0469C83.9673 30.0623 84.0002 30.0858 84.0277 30.1157C84.055 30.1467 84.0764 30.1835 84.0905 30.2237C84.1047 30.2639 84.1114 30.3068 84.1102 30.3498V31.2821C84.1107 31.323 84.1036 31.3636 84.0894 31.4015C84.0753 31.4395 84.0543 31.4739 84.0277 31.5028C84.0002 31.5327 83.9673 31.5561 83.9311 31.5716C83.895 31.5871 83.8563 31.5943 83.8174 31.5928H81.6734V38.7175C81.6748 38.758 81.6681 38.7982 81.6539 38.8355C81.6396 38.8728 81.6182 38.9063 81.5909 38.9337C81.5638 38.9643 81.531 38.9882 81.4947 39.0037C81.4585 39.0192 81.4195 39.0261 81.3806 39.0238L80.3085 39.0418Z" fill="white"/>
+                    <path d="M87.8995 39.0418C87.8625 39.0433 87.8257 39.0361 87.7915 39.0205C87.7573 39.005 87.7266 38.9815 87.7016 38.9517C87.6752 38.9237 87.6542 38.89 87.64 38.8529C87.6259 38.8157 87.6188 38.7758 87.6192 38.7356V30.3498C87.618 30.3068 87.6246 30.2639 87.6388 30.2237C87.6529 30.1835 87.6743 30.1467 87.7016 30.1157C87.7273 30.0868 87.7581 30.0639 87.7921 30.0484C87.8261 30.0329 87.8627 30.0252 87.8995 30.0256H93.0289C93.0677 30.0241 93.1063 30.0314 93.1425 30.0469C93.1787 30.0623 93.2116 30.0858 93.2391 30.1157C93.2664 30.1467 93.2878 30.1835 93.3019 30.2237C93.3161 30.2639 93.3228 30.3068 93.3216 30.3498V31.1965C93.3221 31.2375 93.315 31.2781 93.3008 31.316C93.2866 31.3539 93.2657 31.3883 93.2391 31.4172C93.2116 31.4471 93.1787 31.4705 93.1425 31.486C93.1063 31.5015 93.0677 31.5087 93.0289 31.5073H89.1942V33.7861H92.7732C92.8509 33.7835 92.9264 33.8142 92.9835 33.8717C93.0104 33.901 93.0314 33.9362 93.0449 33.975C93.0584 34.0139 93.0641 34.0554 93.0618 34.0968V34.885C93.0641 34.9264 93.0584 34.9679 93.0449 35.0068C93.0314 35.0456 93.0104 35.0808 92.9835 35.1102C92.9264 35.1676 92.8509 35.1983 92.7732 35.1957H89.1942V37.5511H93.1237C93.1628 37.5491 93.2018 37.5561 93.2382 37.5718C93.2747 37.5875 93.3076 37.6115 93.3349 37.6422C93.3622 37.6728 93.3832 37.7095 93.3965 37.7497C93.4099 37.7899 93.4153 37.8327 93.4123 37.8754V38.7266C93.4134 38.7665 93.4071 38.8063 93.3936 38.8435C93.3801 38.8807 93.3599 38.9145 93.334 38.9427C93.3064 38.9726 93.2735 38.996 93.2373 39.0115C93.2012 39.027 93.1625 39.0343 93.1237 39.0328L87.8995 39.0418Z" fill="white"/>
+                    <path d="M97.482 39.0418C97.445 39.0433 97.4082 39.0361 97.374 39.0205C97.3398 39.005 97.3092 38.9815 97.2841 38.9517C97.2577 38.9237 97.2367 38.89 97.2226 38.8529C97.2084 38.8157 97.2013 38.7758 97.2017 38.7356V30.3498C97.2005 30.3068 97.2071 30.2639 97.2213 30.2237C97.2355 30.1835 97.2568 30.1467 97.2841 30.1157C97.3098 30.0868 97.3406 30.0639 97.3746 30.0484C97.4086 30.033 97.4452 30.0252 97.482 30.0256H100.5C101.296 29.9784 102.083 30.2329 102.727 30.7462C103.005 31.0014 103.224 31.3241 103.367 31.6886C103.51 32.053 103.574 32.449 103.551 32.8448C103.578 33.3909 103.439 33.9314 103.157 34.383C102.874 34.8346 102.464 35.1723 101.989 35.3443L103.692 38.632C103.714 38.6745 103.727 38.7224 103.729 38.7716C103.73 38.8082 103.723 38.8447 103.71 38.8782C103.696 38.9118 103.676 38.9415 103.65 38.9652C103.605 39.0134 103.545 39.0408 103.481 39.0418H102.422C102.366 39.0458 102.311 39.0374 102.258 39.0173C102.206 38.9972 102.158 38.9657 102.117 38.9247C102.053 38.8573 101.999 38.7799 101.956 38.695L100.451 35.6416H98.8303V38.7356C98.8324 38.8154 98.8058 38.893 98.7561 38.9517C98.73 38.9825 98.6979 39.0065 98.6623 39.022C98.6266 39.0376 98.5883 39.0444 98.55 39.0418H97.482ZM98.8221 34.1869H100.471C100.853 34.2199 101.232 34.0927 101.531 33.8311C101.652 33.7025 101.745 33.547 101.806 33.3753C101.866 33.2035 101.892 33.0195 101.882 32.8358C101.891 32.65 101.865 32.464 101.805 32.2897C101.746 32.1153 101.654 31.9563 101.535 31.8225C101.238 31.5528 100.856 31.4218 100.471 31.4577H98.8221V34.1869Z" fill="white"/>
+                    <path d="M110.516 39.1724C109.902 39.1905 109.292 39.0598 108.73 38.7896C108.239 38.5428 107.832 38.133 107.567 37.6186C107.267 37.0111 107.11 36.3318 107.11 35.6416C107.11 35.2723 107.11 34.9075 107.11 34.5472C107.11 34.1869 107.11 33.8176 107.11 33.4393C107.112 32.7539 107.273 32.0803 107.576 31.4802C107.855 30.967 108.267 30.5551 108.759 30.2958C109.314 30.0313 109.912 29.8948 110.518 29.8948C111.123 29.8948 111.722 30.0313 112.276 30.2958C112.771 30.5523 113.185 30.9648 113.464 31.4802C113.771 32.0786 113.931 32.7534 113.93 33.4393C113.946 33.8176 113.954 34.1869 113.954 34.5472C113.954 34.9075 113.946 35.2723 113.93 35.6416C113.932 36.3317 113.776 37.0115 113.476 37.6186C113.208 38.1334 112.798 38.5431 112.305 38.7896C111.742 39.0593 111.131 39.19 110.516 39.1724ZM110.516 37.6907C110.971 37.709 111.416 37.5311 111.753 37.1953C112.109 36.7493 112.292 36.1695 112.264 35.5785C112.264 35.2002 112.289 34.8489 112.289 34.5292C112.289 34.2094 112.289 33.8581 112.264 33.4888C112.264 33.0681 112.178 32.6526 112.012 32.2729C111.88 31.9816 111.666 31.7436 111.402 31.5928C111.127 31.4439 110.823 31.3697 110.516 31.3766C110.212 31.3709 109.913 31.445 109.641 31.5928C109.376 31.7434 109.161 31.9813 109.027 32.2729C108.863 32.653 108.778 33.0684 108.78 33.4888C108.78 33.8581 108.78 34.2049 108.78 34.5292C108.78 34.8489 108.78 35.2002 108.78 35.5785C108.749 36.1699 108.932 36.7508 109.291 37.1953C109.623 37.5312 110.063 37.7094 110.516 37.6907Z" fill="white"/>
+                    <path d="M118.094 39.0419C118.02 39.0419 117.949 39.0096 117.896 38.9521C117.843 38.8947 117.814 38.8168 117.814 38.7356V30.3499C117.812 30.3067 117.818 30.2635 117.832 30.2231C117.846 30.1828 117.868 30.1462 117.896 30.1157C117.922 30.0868 117.953 30.064 117.987 30.0485C118.021 30.033 118.057 30.0252 118.094 30.0256H121.203C121.746 30.0117 122.287 30.119 122.791 30.3409C123.222 30.5334 123.587 30.8669 123.838 31.2956C124.102 31.7743 124.233 32.3269 124.213 32.8854C124.235 33.4442 124.104 33.9975 123.838 34.4752C123.585 34.8976 123.22 35.2247 122.791 35.4119C122.285 35.6263 121.746 35.7304 121.203 35.7182H119.467V38.7356C119.469 38.8155 119.443 38.8931 119.393 38.9518C119.367 38.9825 119.335 39.0065 119.299 39.0221C119.264 39.0377 119.225 39.0444 119.187 39.0419H118.094ZM119.455 34.2905H121.158C121.533 34.3195 121.904 34.1924 122.197 33.9348C122.323 33.7984 122.42 33.6342 122.483 33.4532C122.545 33.2721 122.572 33.0785 122.56 32.8854C122.575 32.5053 122.453 32.1337 122.222 31.8496C122.078 31.708 121.91 31.6001 121.727 31.5327C121.544 31.4653 121.35 31.4398 121.158 31.4578H119.455V34.2905Z" fill="white"/>
+                    <path d="M128.105 39.0418C128.069 39.0418 128.033 39.0339 127.999 39.0184C127.965 39.003 127.934 38.9803 127.909 38.9518C127.883 38.9233 127.863 38.8896 127.849 38.8524C127.835 38.8153 127.829 38.7756 127.829 38.7356V30.3498C127.827 30.3071 127.833 30.2643 127.847 30.2241C127.86 30.1838 127.881 30.147 127.907 30.1157C127.96 30.0586 128.031 30.0263 128.105 30.0256H133.235C133.274 30.0241 133.312 30.0314 133.348 30.0469C133.385 30.0623 133.417 30.0858 133.445 30.1157C133.473 30.1461 133.495 30.1827 133.509 30.2231C133.523 30.2635 133.53 30.3067 133.527 30.3498V31.1965C133.529 31.2376 133.522 31.2785 133.508 31.3166C133.494 31.3547 133.472 31.389 133.445 31.4172C133.417 31.4471 133.385 31.4705 133.348 31.486C133.312 31.5015 133.274 31.5087 133.235 31.5073H129.4V33.7861H132.979C133.018 33.784 133.056 33.7906 133.092 33.8053C133.128 33.82 133.161 33.8426 133.189 33.8717C133.217 33.9006 133.239 33.9356 133.253 33.9745C133.267 34.0133 133.274 34.0551 133.272 34.0968V34.885C133.274 34.9268 133.267 34.9685 133.253 35.0073C133.239 35.0462 133.217 35.0812 133.189 35.1102C133.161 35.1392 133.128 35.1618 133.092 35.1765C133.056 35.1912 133.018 35.1978 132.979 35.1957H129.4V37.5511H133.33C133.368 37.5497 133.407 37.5569 133.443 37.5724C133.479 37.5879 133.512 37.6113 133.54 37.6412C133.595 37.7043 133.624 37.7885 133.622 37.8754V38.7266C133.622 38.7679 133.615 38.8089 133.6 38.8469C133.585 38.885 133.563 38.9194 133.536 38.948C133.509 38.9766 133.476 38.9989 133.441 39.0135C133.405 39.0281 133.367 39.0346 133.33 39.0328L128.105 39.0418Z" fill="white"/>
+                    <path d="M137.696 39.0418C137.66 39.0418 137.623 39.0339 137.59 39.0184C137.556 39.003 137.525 38.9803 137.5 38.9518C137.474 38.9233 137.454 38.8896 137.44 38.8524C137.426 38.8153 137.419 38.7756 137.42 38.7356V30.3498C137.418 30.3071 137.424 30.2643 137.437 30.2241C137.451 30.1838 137.472 30.147 137.498 30.1157C137.551 30.0586 137.622 30.0263 137.696 30.0256H140.719C141.515 29.9784 142.301 30.2329 142.945 30.7462C143.223 31.0014 143.443 31.3241 143.586 31.6886C143.729 32.053 143.792 32.449 143.77 32.8448C143.794 33.3905 143.655 33.9299 143.373 34.381C143.09 34.8322 142.681 35.1704 142.207 35.3443L143.91 38.632C143.93 38.6756 143.941 38.7231 143.943 38.7716C143.944 38.8078 143.938 38.8437 143.925 38.8771C143.912 38.9105 143.893 38.9405 143.869 38.9652C143.823 39.0127 143.763 39.04 143.7 39.0418H142.636C142.581 39.0451 142.526 39.0365 142.475 39.0164C142.423 38.9963 142.376 38.9651 142.335 38.9247C142.271 38.8561 142.216 38.7789 142.17 38.695L140.669 35.6416H139.049V38.7356C139.049 38.816 139.021 38.8935 138.97 38.9517C138.945 38.9824 138.914 39.0064 138.879 39.022C138.844 39.0375 138.806 39.0443 138.768 39.0418H137.696ZM139.041 34.1869H140.69C141.072 34.2208 141.451 34.0935 141.749 33.8311C141.87 33.7025 141.964 33.547 142.024 33.3753C142.085 33.2035 142.111 33.0195 142.1 32.8358C142.11 32.6503 142.084 32.4646 142.026 32.2902C141.967 32.1159 141.876 31.9566 141.758 31.8225C141.459 31.5539 141.076 31.423 140.69 31.4577H139.041V34.1869Z" fill="white"/>
+                    <path d="M147.085 39.0419C147.022 39.04 146.962 39.0127 146.916 38.9653C146.892 38.9405 146.873 38.9105 146.86 38.8771C146.847 38.8437 146.841 38.8078 146.842 38.7716C146.843 38.7313 146.852 38.6916 146.866 38.6545L149.674 30.3499C149.698 30.2628 149.744 30.1848 149.806 30.1247C149.884 30.0561 149.982 30.0209 150.082 30.0256H151.352C151.401 30.0217 151.45 30.0284 151.496 30.0455C151.542 30.0625 151.584 30.0894 151.62 30.1247C151.683 30.1868 151.731 30.2639 151.761 30.3499L154.569 38.6545C154.572 38.6935 154.572 38.7327 154.569 38.7716C154.57 38.8075 154.565 38.8433 154.553 38.8767C154.541 38.9101 154.522 38.9403 154.498 38.9653C154.478 38.9893 154.453 39.0084 154.425 39.0216C154.398 39.0348 154.368 39.0417 154.338 39.0419H153.323C153.281 39.0462 153.237 39.0413 153.196 39.0274C153.155 39.0135 153.117 38.9909 153.084 38.9608C153.039 38.9167 153.005 38.8609 152.985 38.7987L152.437 37.2269H148.973L148.425 38.7987C148.402 38.8592 148.368 38.9143 148.326 38.9608C148.293 38.9909 148.255 39.0135 148.214 39.0274C148.173 39.0413 148.13 39.0462 148.087 39.0419H147.085ZM149.394 35.7452H152.041L150.713 31.764L149.394 35.7452Z" fill="white"/>
+                    <path d="M158.275 39.0418C158.239 39.0418 158.202 39.0339 158.169 39.0184C158.135 39.003 158.104 38.9803 158.078 38.9518C158.053 38.9233 158.032 38.8895 158.019 38.8524C158.005 38.8153 157.998 38.7756 157.999 38.7356V30.3498C157.997 30.3071 158.003 30.2643 158.016 30.2241C158.03 30.1838 158.051 30.147 158.077 30.1157C158.13 30.0586 158.201 30.0263 158.275 30.0256H161.656C162.185 30.0033 162.712 30.111 163.198 30.3408C163.567 30.524 163.874 30.8278 164.077 31.21C164.272 31.6053 164.37 32.0491 164.361 32.4981C164.369 32.7926 164.315 33.0851 164.205 33.3538C164.116 33.5799 163.985 33.7838 163.821 33.9527C163.686 34.0946 163.535 34.2171 163.372 34.3175C163.706 34.4873 163.991 34.7536 164.196 35.0876C164.435 35.4656 164.558 35.9166 164.547 36.3757C164.557 36.8573 164.448 37.3331 164.233 37.7538C164.016 38.1654 163.69 38.4952 163.297 38.6995C162.821 38.9437 162.298 39.061 161.772 39.0418H158.275ZM159.619 33.7231H161.45C161.786 33.7515 162.118 33.6332 162.374 33.3943C162.477 33.2828 162.557 33.1492 162.611 33.0019C162.664 32.8546 162.689 32.6968 162.683 32.5386C162.691 32.3814 162.668 32.2242 162.614 32.0779C162.561 31.9317 162.479 31.7999 162.374 31.6919C162.11 31.472 161.781 31.3647 161.45 31.3902H159.619V33.7231ZM159.619 37.6772H161.566C161.741 37.6918 161.916 37.6657 162.081 37.6004C162.246 37.5352 162.396 37.4324 162.522 37.2989C162.736 37.0487 162.853 36.7178 162.848 36.3757C162.853 36.2024 162.826 36.0298 162.768 35.8681C162.711 35.7064 162.624 35.559 162.514 35.4344C162.388 35.304 162.239 35.2035 162.076 35.1392C161.912 35.0748 161.739 35.0481 161.566 35.0606H159.619V37.6772Z" fill="white"/>
+                    <path d="M168.62 39.0418C168.584 39.0418 168.548 39.0338 168.514 39.0184C168.48 39.003 168.449 38.9803 168.424 38.9518C168.398 38.9233 168.378 38.8895 168.364 38.8524C168.35 38.8153 168.344 38.7755 168.344 38.7355V30.3363C168.343 30.2957 168.349 30.2552 168.363 30.2172C168.376 30.1793 168.397 30.1448 168.423 30.1156C168.475 30.0586 168.546 30.0262 168.62 30.0256H169.717C169.755 30.0242 169.793 30.0315 169.829 30.047C169.864 30.0625 169.897 30.0859 169.923 30.1156C169.973 30.1762 169.999 30.2551 169.998 30.3363V38.7355C170 38.8154 169.973 38.893 169.923 38.9517C169.897 38.9824 169.865 39.0065 169.83 39.022C169.794 39.0376 169.756 39.0444 169.717 39.0418H168.62Z" fill="white"/>
+                    <path d="M174.422 39.0418C174.385 39.0433 174.348 39.036 174.314 39.0205C174.28 39.0049 174.249 38.9815 174.224 38.9517C174.198 38.9236 174.177 38.89 174.163 38.8528C174.148 38.8157 174.141 38.7758 174.142 38.7355V30.3363C174.141 30.2953 174.148 30.2547 174.162 30.2168C174.177 30.1789 174.198 30.1445 174.224 30.1156C174.25 30.0867 174.281 30.0639 174.315 30.0484C174.349 30.0329 174.385 30.0251 174.422 30.0255H175.506C175.543 30.0251 175.58 30.0329 175.614 30.0484C175.648 30.0639 175.679 30.0867 175.704 30.1156C175.732 30.1438 175.753 30.1781 175.767 30.2162C175.782 30.2543 175.788 30.2952 175.787 30.3363V37.5105H179.498C179.537 37.5086 179.575 37.5156 179.612 37.531C179.648 37.5464 179.681 37.5698 179.709 37.5999C179.736 37.63 179.758 37.666 179.772 37.7057C179.786 37.7454 179.792 37.7878 179.79 37.8303V38.731C179.79 38.7724 179.783 38.8133 179.768 38.8514C179.753 38.8895 179.731 38.9239 179.704 38.9525C179.677 38.9811 179.644 39.0034 179.609 39.0179C179.573 39.0325 179.536 39.0391 179.498 39.0373L174.422 39.0418Z" fill="white"/>
+                    <path d="M183.518 39.0418C183.443 39.0418 183.372 39.0095 183.32 38.9521C183.267 38.8947 183.237 38.8168 183.237 38.7356V30.3363C183.236 30.2953 183.243 30.2543 183.257 30.2163C183.271 30.1782 183.293 30.1439 183.32 30.1157C183.346 30.0868 183.376 30.0639 183.41 30.0484C183.444 30.033 183.481 30.0252 183.518 30.0256H184.61C184.649 30.0236 184.687 30.0307 184.722 30.0462C184.758 30.0618 184.79 30.0854 184.817 30.1157C184.866 30.1763 184.893 30.2552 184.891 30.3363V38.7356C184.893 38.8154 184.866 38.893 184.817 38.9517C184.791 38.9827 184.759 39.0069 184.723 39.0225C184.687 39.0381 184.649 39.0447 184.61 39.0418H183.518Z" fill="white"/>
+                    <path d="M191.129 39.0418C191.092 39.0433 191.056 39.0361 191.021 39.0205C190.987 39.005 190.957 38.9815 190.932 38.9517C190.905 38.9237 190.884 38.89 190.87 38.8529C190.856 38.8157 190.849 38.7758 190.849 38.7356V31.6109H188.693C188.656 31.6113 188.619 31.6035 188.585 31.588C188.551 31.5725 188.52 31.5496 188.495 31.5208C188.468 31.4919 188.447 31.4575 188.433 31.4196C188.419 31.3817 188.412 31.341 188.412 31.3001V30.3498C188.411 30.3068 188.418 30.2639 188.432 30.2237C188.446 30.1835 188.467 30.1467 188.495 30.1157C188.52 30.0868 188.551 30.0639 188.585 30.0484C188.619 30.0329 188.656 30.0252 188.693 30.0256H194.638C194.677 30.0241 194.716 30.0314 194.752 30.0469C194.788 30.0623 194.821 30.0858 194.849 30.1157C194.876 30.1467 194.897 30.1835 194.911 30.2237C194.926 30.2639 194.932 30.3068 194.931 30.3498V31.2821C194.932 31.323 194.925 31.3636 194.91 31.4015C194.896 31.4395 194.875 31.4739 194.849 31.5028C194.821 31.5327 194.788 31.5561 194.752 31.5716C194.716 31.5871 194.677 31.5943 194.638 31.5928H192.494V38.7175C192.494 38.7589 192.487 38.7999 192.472 38.8379C192.457 38.876 192.435 38.9104 192.408 38.939C192.38 38.9676 192.348 38.9899 192.313 39.0045C192.277 39.019 192.239 39.0256 192.201 39.0238L191.129 39.0418Z" fill="white"/>
+                    <path d="M200.865 39.0418C200.79 39.0418 200.719 39.0096 200.666 38.9521C200.614 38.8947 200.584 38.8168 200.584 38.7356V35.8217L197.834 30.4399L197.809 30.3724C197.805 30.3471 197.805 30.3211 197.809 30.2958C197.808 30.2237 197.834 30.1542 197.879 30.1022C197.9 30.0776 197.926 30.0581 197.954 30.045C197.983 30.0318 198.013 30.0252 198.044 30.0256H199.079C199.161 30.0219 199.241 30.049 199.306 30.1022C199.359 30.146 199.401 30.2032 199.43 30.2688L201.413 34.0203L203.384 30.2688C203.418 30.2049 203.463 30.1485 203.516 30.1022C203.581 30.0496 203.661 30.0226 203.743 30.0256H204.769C204.802 30.025 204.834 30.0316 204.864 30.045C204.894 30.0584 204.921 30.0783 204.944 30.1036C204.967 30.1289 204.985 30.159 204.996 30.192C205.008 30.2251 205.014 30.2604 205.013 30.2958C205.015 30.3213 205.015 30.3469 205.013 30.3724C205.01 30.3977 205 30.4215 204.984 30.4399L202.233 35.8217V38.7356C202.233 38.777 202.226 38.8179 202.211 38.856C202.196 38.8941 202.174 38.9284 202.147 38.9571C202.12 38.9857 202.087 39.0079 202.052 39.0225C202.016 39.0371 201.979 39.0437 201.941 39.0418H200.865Z" fill="white"/>
+                    <path d="M65.4567 58.3623C64.8291 58.3837 64.2043 58.2625 63.6218 58.0065C63.1823 57.8184 62.7957 57.5079 62.5003 57.1058C62.253 56.759 62.1091 56.3377 62.088 55.8988C62.0866 55.863 62.0922 55.8272 62.1042 55.7939C62.1163 55.7605 62.1347 55.7303 62.1581 55.7051C62.1815 55.6802 62.2092 55.6606 62.2397 55.6475C62.2701 55.6343 62.3026 55.6279 62.3354 55.6286H63.3827C63.4652 55.6205 63.5474 55.6462 63.6136 55.7006C63.6672 55.7491 63.7133 55.8069 63.7497 55.8718C63.8051 56.0545 63.8981 56.2209 64.0218 56.3582C64.1761 56.5311 64.3633 56.6648 64.5702 56.75C64.8512 56.862 65.1494 56.914 65.4484 56.9031C65.8885 56.9354 66.3278 56.8291 66.7143 56.5969C66.8434 56.5081 66.9494 56.3843 67.0216 56.2374C67.0939 56.0906 67.13 55.9258 67.1266 55.7592C67.1314 55.6477 67.114 55.5364 67.0756 55.4329C67.0371 55.3295 66.9786 55.2364 66.904 55.1602C66.6993 54.9753 66.4641 54.8347 66.2112 54.7459C65.8061 54.5894 65.3931 54.4586 64.9742 54.3541C64.4631 54.2274 63.9666 54.0386 63.494 53.7911C63.1339 53.6063 62.8251 53.3203 62.5992 52.9624C62.3903 52.5636 62.2863 52.1095 62.2987 51.6501C62.3111 51.1908 62.4393 50.7441 62.6694 50.3593C62.9409 49.9575 63.3091 49.6457 63.7331 49.4586C64.2551 49.2211 64.8173 49.1075 65.3824 49.1254C65.8431 49.1155 66.3019 49.1917 66.739 49.3505C67.0957 49.4786 67.4272 49.6787 67.7162 49.9405C67.9565 50.1614 68.1577 50.4286 68.31 50.7286C68.4412 50.9775 68.5162 51.2569 68.5285 51.5438C68.5286 51.6128 68.5067 51.6797 68.4666 51.733C68.4429 51.7603 68.414 51.7817 68.382 51.7957C68.3499 51.8097 68.3156 51.8159 68.2811 51.814H67.1884C67.1238 51.8149 67.0599 51.7978 67.0029 51.7645C66.9319 51.7214 66.8766 51.6531 66.8462 51.5708C66.817 51.4285 66.7613 51.2943 66.6825 51.1766C66.6038 51.0588 66.5038 50.96 66.3885 50.8863C66.0866 50.6885 65.7383 50.5915 65.3866 50.6071C65.0294 50.5893 64.6745 50.6781 64.3599 50.8638C64.2297 50.9412 64.1221 51.0569 64.0492 51.1978C63.9763 51.3388 63.9411 51.4992 63.9476 51.6609C63.9401 51.881 64.011 52.0957 64.1455 52.2599C64.321 52.4496 64.534 52.5929 64.7681 52.6787C65.0567 52.8003 65.4361 52.9264 65.9061 53.066C66.4728 53.1907 67.0257 53.3809 67.5554 53.6335C67.9305 53.8031 68.2537 54.0859 68.4873 54.4486C68.6931 54.8282 68.7947 55.2643 68.78 55.7051C68.7938 56.2251 68.6488 56.7354 68.3677 57.1553C68.0617 57.5758 67.6549 57.8954 67.1926 58.0785C66.6344 58.2872 66.0463 58.3833 65.4567 58.3623Z" fill="white"/>
+                    <path d="M75.8101 58.3622C75.1984 58.3776 74.5908 58.2486 74.0289 57.9839C73.5343 57.7394 73.1251 57.3272 72.862 56.8085C72.5658 56.1835 72.4237 55.485 72.4497 54.7819V49.5397C72.4477 49.4528 72.4774 49.3686 72.5321 49.3055C72.5586 49.2765 72.5901 49.2536 72.6248 49.2381C72.6595 49.2226 72.6967 49.2149 72.7342 49.2154H73.8062C73.8445 49.2135 73.8827 49.2205 73.9182 49.236C73.9538 49.2516 73.9859 49.2752 74.0124 49.3055C74.0657 49.3693 74.0938 49.4534 74.0907 49.5397V54.7819C74.048 55.3484 74.2125 55.9104 74.5484 56.3446C74.7156 56.5192 74.9139 56.6545 75.1309 56.742C75.348 56.8296 75.5791 56.8675 75.8101 56.8535C76.0373 56.8665 76.2645 56.8279 76.4773 56.7403C76.6902 56.6528 76.8842 56.518 77.0471 56.3446C77.3795 55.9085 77.5423 55.3475 77.5007 54.7819V49.5397C77.4989 49.4966 77.5054 49.4536 77.5197 49.4133C77.534 49.3731 77.5558 49.3366 77.5837 49.3061C77.6116 49.2756 77.645 49.2518 77.6819 49.2362C77.7187 49.2206 77.7581 49.2135 77.7975 49.2154H78.8572C78.8955 49.2135 78.9336 49.2205 78.9692 49.236C79.0048 49.2516 79.0369 49.2752 79.0634 49.3055C79.1166 49.3693 79.1448 49.4534 79.1417 49.5397V54.7819C79.166 55.4849 79.024 56.1829 78.7294 56.8085C78.4724 57.3275 78.0669 57.7403 77.5748 57.9839C77.0181 58.2465 76.4164 58.3755 75.8101 58.3622Z" fill="white"/>
+                    <path d="M83.5742 58.2362C83.5367 58.2367 83.4995 58.229 83.4648 58.2135C83.4301 58.1981 83.3986 58.1751 83.3721 58.1461C83.3192 58.0872 83.2897 58.008 83.2897 57.9255V49.5262C83.2897 49.4437 83.3192 49.3645 83.3721 49.3056C83.3986 49.2766 83.4301 49.2536 83.4648 49.2382C83.4995 49.2227 83.5367 49.215 83.5742 49.2155H84.6833C84.7215 49.2141 84.7595 49.2214 84.795 49.2369C84.8305 49.2524 84.8627 49.2758 84.8895 49.3056C84.9386 49.3664 84.9651 49.4451 84.9637 49.5262V57.9255C84.9651 58.0066 84.9386 58.0853 84.8895 58.1461C84.8627 58.1759 84.8305 58.1993 84.795 58.2148C84.7595 58.2303 84.7215 58.2376 84.6833 58.2362H83.5742Z" fill="white"/>
+                    <path d="M91.2766 58.2361C91.239 58.2372 91.2017 58.2297 91.1669 58.2142C91.1321 58.1987 91.1007 58.1755 91.0745 58.146C91.0217 58.0871 90.992 58.0079 90.992 57.9254V50.8007H88.8108C88.7733 50.8013 88.7361 50.7936 88.7013 50.7782C88.6665 50.7628 88.635 50.74 88.6084 50.711C88.5819 50.682 88.561 50.6475 88.5469 50.6096C88.5328 50.5716 88.5258 50.5309 88.5263 50.4899V49.5397C88.5244 49.4528 88.554 49.3685 88.6088 49.3055C88.6352 49.2765 88.6668 49.2535 88.7015 49.2381C88.7362 49.2226 88.7733 49.2149 88.8108 49.2154H94.8143C94.8531 49.2139 94.8918 49.2212 94.928 49.2367C94.9642 49.2521 94.997 49.2756 95.0246 49.3055C95.0793 49.3685 95.109 49.4528 95.107 49.5397V50.4899C95.1075 50.5308 95.1005 50.5715 95.0863 50.6094C95.0721 50.6473 95.0511 50.6817 95.0246 50.7106C94.997 50.7405 94.9642 50.7639 94.928 50.7794C94.8918 50.7949 94.8531 50.8021 94.8143 50.8007H92.6413V57.9254C92.6423 57.9664 92.6354 58.0072 92.6213 58.0451C92.6071 58.0831 92.5858 58.1175 92.5589 58.146C92.5313 58.1759 92.4984 58.1994 92.4623 58.2149C92.4261 58.2304 92.3874 58.2376 92.3486 58.2361H91.2766Z" fill="white"/>
+                    <path d="M98.9375 58.2361C98.9 58.2366 98.8629 58.2289 98.8282 58.2134C98.7934 58.198 98.7619 58.175 98.7355 58.146C98.6826 58.0871 98.653 58.0079 98.653 57.9254V49.5397C98.6511 49.4528 98.6807 49.3685 98.7355 49.3055C98.7619 49.2765 98.7934 49.2535 98.8282 49.2381C98.8629 49.2226 98.9 49.2149 98.9375 49.2154H104.125C104.164 49.2135 104.203 49.2205 104.24 49.2362C104.277 49.2518 104.311 49.2756 104.338 49.3061C104.366 49.3366 104.388 49.3731 104.402 49.4133C104.417 49.4535 104.423 49.4966 104.421 49.5397V50.3863C104.422 50.4273 104.416 50.4681 104.401 50.5061C104.387 50.5441 104.366 50.5784 104.339 50.607C104.281 50.6668 104.204 50.6992 104.125 50.6971H100.245V52.9759H103.885C103.964 52.9744 104.041 53.0049 104.1 53.0615C104.128 53.0904 104.149 53.1255 104.163 53.1643C104.178 53.2031 104.184 53.2449 104.182 53.2866V54.0838C104.184 54.1256 104.178 54.1673 104.163 54.2061C104.149 54.245 104.128 54.2801 104.1 54.309C104.041 54.3671 103.964 54.3979 103.885 54.3945H100.265V56.7544H104.24C104.279 56.7526 104.318 56.7595 104.355 56.7749C104.391 56.7902 104.424 56.8136 104.452 56.8436C104.48 56.8736 104.502 56.9096 104.517 56.9493C104.531 56.9889 104.538 57.0315 104.537 57.0742V57.9254C104.537 58.0079 104.507 58.0871 104.454 58.146C104.397 58.2058 104.32 58.2382 104.24 58.2361H98.9375Z" fill="white"/>
+                    <path d="M62.1252 18.78C62.0882 18.7816 62.0513 18.7743 62.0172 18.7587C61.983 18.7432 61.9523 18.7197 61.9273 18.69C61.9008 18.6619 61.8799 18.6283 61.8657 18.5911C61.8515 18.5539 61.8444 18.514 61.8448 18.4738V10.0881C61.8429 10.0012 61.8725 9.91696 61.9273 9.85387C61.9529 9.825 61.9837 9.80212 62.0178 9.78664C62.0518 9.77115 62.0883 9.76339 62.1252 9.7638H63.1519C63.19 9.76295 63.2279 9.77048 63.2633 9.78595C63.2988 9.80142 63.3309 9.82453 63.358 9.85387C63.3859 9.8845 63.4077 9.92114 63.4219 9.96146C63.4361 10.0018 63.4424 10.0449 63.4405 10.0881V13.101L66.0753 9.99798C66.1202 9.93998 66.1731 9.88986 66.232 9.84937C66.3215 9.78683 66.4269 9.75687 66.5329 9.7638H67.6833C67.7465 9.76478 67.8071 9.79218 67.8524 9.84036C67.8775 9.86451 67.8975 9.89434 67.9111 9.92777C67.9246 9.96121 67.9313 9.99746 67.9307 10.034C67.9321 10.0913 67.9146 10.1473 67.8813 10.1916L64.6775 14.0782L68.1039 18.3432C68.1414 18.389 68.162 18.4484 68.1616 18.5098C68.1624 18.546 68.1562 18.5819 68.1434 18.6153C68.1307 18.6487 68.1116 18.6787 68.0874 18.7035C68.0655 18.7281 68.0392 18.7477 68.0101 18.7608C67.981 18.774 67.9498 18.7805 67.9184 18.78H66.7185C66.6086 18.7873 66.4997 18.754 66.4092 18.6854C66.3576 18.6432 66.3081 18.5982 66.2608 18.5503L63.4405 15.1366V18.4738C63.4419 18.5142 63.4353 18.5544 63.421 18.5918C63.4068 18.6291 63.3853 18.6626 63.358 18.69C63.3315 18.7202 63.2995 18.7439 63.2639 18.7594C63.2283 18.7749 63.1901 18.782 63.1519 18.78H62.1252Z" fill="white"/>
+                    <path d="M74.6806 18.9107C74.0674 18.9279 73.458 18.7988 72.8952 18.5324C72.4038 18.2827 71.9959 17.8718 71.7283 17.3569C71.4317 16.7482 71.276 16.0694 71.2748 15.3799C71.2748 15.0106 71.2748 14.6458 71.2748 14.2855C71.2748 13.9252 71.2748 13.5559 71.2748 13.1776C71.2773 12.4922 71.4376 11.8186 71.7407 11.2185C72.0201 10.7054 72.4317 10.2934 72.9241 10.0341C73.4795 9.77274 74.0779 9.63794 74.6827 9.63794C75.2874 9.63794 75.8858 9.77274 76.4412 10.0341C76.9355 10.292 77.3488 10.7042 77.6287 11.2185C77.9356 11.817 78.096 12.4917 78.0946 13.1776C78.1111 13.5559 78.1194 13.9252 78.1194 14.2855C78.1194 14.6458 78.1111 15.0106 78.0946 15.3799C78.0974 16.07 77.9414 16.7498 77.6411 17.3569C77.3731 17.873 76.9635 18.2842 76.4701 18.5324C75.9056 18.7983 75.2951 18.9274 74.6806 18.9107ZM74.6806 17.429C75.1367 17.4493 75.5816 17.2712 75.9176 16.9336C76.2776 16.4898 76.4628 15.9088 76.433 15.3168C76.433 14.9385 76.4577 14.5872 76.4577 14.2675C76.4577 13.9477 76.4577 13.6009 76.433 13.2316C76.4337 12.8094 76.3478 12.3923 76.1815 12.0112C76.0487 11.7199 75.8351 11.482 75.5712 11.3311C75.2955 11.1838 74.9915 11.1112 74.6847 11.1195C74.382 11.1121 74.0821 11.1847 73.8106 11.3311C73.5455 11.4817 73.3305 11.7196 73.1962 12.0112C73.0318 12.3931 72.946 12.8096 72.9447 13.2316C72.9447 13.6009 72.9447 13.9432 72.9447 14.2675C72.9447 14.5917 72.9447 14.9385 72.9447 15.3168C72.9149 15.9088 73.1001 16.4898 73.4601 16.9336C73.791 17.2684 74.2298 17.4465 74.6806 17.429Z" fill="white"/>
+                    <path d="M82.2548 18.7801C82.2181 18.7801 82.1819 18.7721 82.1481 18.7567C82.1143 18.7412 82.0836 18.7186 82.0579 18.6901C82.0322 18.6616 82.012 18.6278 81.9983 18.5907C81.9847 18.5536 81.9779 18.5138 81.9785 18.4738V10.0881C81.9754 10.0019 82.0036 9.91774 82.0569 9.85394C82.1096 9.79687 82.1806 9.76454 82.2548 9.76386H85.0998C85.7663 9.73842 86.4298 9.87533 87.0419 10.1647C87.5341 10.4123 87.9393 10.828 88.1963 11.3491C88.4752 11.9422 88.6168 12.601 88.6087 13.2677C88.6087 13.646 88.6087 13.9837 88.6087 14.272C88.6087 14.5602 88.6087 14.898 88.6087 15.2673C88.6127 15.9522 88.4716 16.6289 88.1963 17.2443C87.9535 17.7579 87.558 18.166 87.0748 18.4018C86.4664 18.676 85.8112 18.805 85.1534 18.7801H82.2548ZM83.599 17.2984H85.0998C85.4635 17.3131 85.826 17.2441 86.1636 17.0957C86.431 16.9612 86.6438 16.724 86.7615 16.4292C86.9044 16.0479 86.9746 15.6387 86.9676 15.2267C86.9676 14.97 86.9676 14.7449 86.9676 14.5512C86.9676 14.3575 86.9676 14.1639 86.9676 13.9702C86.9676 13.7766 86.9676 13.5559 86.9676 13.3082C86.9936 12.7415 86.8228 12.185 86.4894 11.75C86.2909 11.5651 86.0607 11.4252 85.8122 11.3386C85.5637 11.252 85.3019 11.2204 85.0421 11.2456H83.599V17.2984Z" fill="white"/>
+                    <path d="M95.1401 18.9107C94.736 18.9132 94.3335 18.8541 93.9444 18.7351C93.5802 18.6283 93.2376 18.448 92.9341 18.2036C92.6424 17.9625 92.4019 17.6552 92.2291 17.3029C92.048 16.9169 91.9547 16.4891 91.9569 16.0554C91.9558 16.0189 91.9614 15.9825 91.9734 15.9485C91.9855 15.9144 92.0037 15.8834 92.0271 15.8572C92.048 15.8294 92.0745 15.8072 92.1045 15.7924C92.1346 15.7775 92.1673 15.7704 92.2002 15.7717H93.3094C93.3508 15.7688 93.3924 15.7753 93.4314 15.7908C93.4704 15.8063 93.5061 15.8305 93.5362 15.8617C93.5921 15.9328 93.6342 16.0155 93.6598 16.1049C93.6845 16.3791 93.7771 16.6407 93.9279 16.8616C94.0658 17.0519 94.2481 17.1981 94.4557 17.2849C94.6851 17.3779 94.9284 17.4237 95.1731 17.42C95.3854 17.4344 95.5978 17.3942 95.7932 17.3027C95.9887 17.2112 96.1619 17.0709 96.2987 16.8931C96.5876 16.4705 96.7333 15.9517 96.7111 15.4249V11.2861H92.7528C92.7152 11.2874 92.6778 11.28 92.643 11.2645C92.6082 11.249 92.5767 11.2257 92.5507 11.196C92.5004 11.1356 92.4725 11.057 92.4723 10.9753V10.0746C92.4725 9.99298 92.5004 9.91432 92.5507 9.85393C92.5767 9.82428 92.6082 9.80094 92.643 9.78542C92.6778 9.7699 92.7152 9.76255 92.7528 9.76386H98.08C98.1188 9.76239 98.1575 9.76963 98.1937 9.78512C98.2298 9.80061 98.2627 9.82404 98.2903 9.85393C98.3451 9.91702 98.3747 10.0012 98.3727 10.0881V15.4924C98.3856 16.1353 98.2434 16.7706 97.9604 17.3344C97.7009 17.8396 97.3108 18.2501 96.8389 18.5144C96.3102 18.7942 95.7274 18.9302 95.1401 18.9107Z" fill="white"/>
+                    <path d="M102.714 18.7801C102.678 18.7801 102.641 18.7721 102.608 18.7567C102.574 18.7412 102.543 18.7186 102.518 18.6901C102.492 18.6616 102.472 18.6278 102.458 18.5907C102.444 18.5535 102.438 18.5138 102.438 18.4738V10.0746C102.437 10.0342 102.443 9.994 102.457 9.95635C102.47 9.91869 102.49 9.88435 102.516 9.85537C102.542 9.82639 102.573 9.80337 102.607 9.78764C102.641 9.77192 102.677 9.76382 102.714 9.76384H103.811C103.849 9.76246 103.887 9.76975 103.923 9.78525C103.958 9.80075 103.991 9.82414 104.017 9.85391C104.066 9.91474 104.093 9.99348 104.092 10.0746V18.4738C104.094 18.5537 104.067 18.6313 104.017 18.69C103.991 18.7207 103.959 18.7447 103.923 18.7603C103.888 18.7759 103.849 18.7826 103.811 18.7801H102.714Z" fill="white"/>
+                    <path d="M108.532 18.7801C108.495 18.7816 108.458 18.7744 108.424 18.7588C108.39 18.7433 108.359 18.7198 108.334 18.69C108.308 18.662 108.287 18.6284 108.273 18.5912C108.259 18.554 108.252 18.5141 108.252 18.4739V10.0881C108.25 10.0012 108.28 9.91705 108.334 9.85396C108.36 9.82509 108.391 9.80221 108.425 9.78673C108.459 9.77124 108.495 9.76348 108.532 9.76388H109.431C109.474 9.75959 109.518 9.76496 109.559 9.77968C109.6 9.79439 109.638 9.81814 109.67 9.84945C109.706 9.88681 109.74 9.92749 109.769 9.97105L113.126 15.7402V10.0881C113.123 10.0019 113.151 9.91776 113.204 9.85396C113.23 9.82384 113.261 9.80018 113.296 9.78462C113.331 9.76907 113.368 9.76199 113.406 9.76388H114.387C114.426 9.76185 114.466 9.76891 114.502 9.78461C114.538 9.80031 114.571 9.82429 114.599 9.85495C114.626 9.88561 114.647 9.92225 114.66 9.96246C114.674 10.0027 114.679 10.0455 114.676 10.0881V18.4604C114.678 18.5024 114.672 18.5445 114.658 18.584C114.645 18.6235 114.624 18.6596 114.598 18.69C114.571 18.7195 114.54 18.7427 114.505 18.7582C114.47 18.7737 114.433 18.7811 114.396 18.7801H113.488C113.446 18.7849 113.402 18.7793 113.362 18.7637C113.321 18.7482 113.284 18.723 113.253 18.69C113.225 18.6468 113.19 18.6088 113.15 18.5775L109.806 12.9344V18.4739C109.806 18.5152 109.799 18.5562 109.784 18.5943C109.769 18.6323 109.747 18.6667 109.72 18.6953C109.693 18.724 109.66 18.7462 109.625 18.7608C109.589 18.7754 109.552 18.7819 109.514 18.7801H108.532Z" fill="white"/>
+                    </g>
+                    <defs>
+                    <clipPath id="clip0_1021_9147">
+                    <rect width="205" height="68" fill="white"/>
+                    </clipPath>
+                    </defs>
+                    </svg>
+                    
+                
+                <div class="md-footer-copyright__highlight">
+                    © EDENLAB. ALL RIGHTS RESERVED, 2021 - 2026
+                </div>
+                
+                <div class="md-footer-copyright__highlight">
+                powered by
+                <a href="https://www.mkdocs.org" title="MkDocs">MkDocs</a>
+                and
+                <a href="https://squidfunk.github.io/mkdocs-material/"
+                   title="Material for MkDocs">
+                    Material for MkDocs</a>
+                </div>
+            </div>
+            
+            <div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://www.linkedin.com/company/edenlab-it/" target="_blank" rel="noopener" title="www.linkedin.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.4.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2023 Fonticons, Inc.--><path d="M416 32H31.9C14.3 32 0 46.5 0 64.3v383.4C0 465.5 14.3 480 31.9 480H416c17.6 0 32-14.5 32-32.3V64.3c0-17.8-14.4-32.3-32-32.3zM135.4 416H69V202.2h66.5V416zm-33.2-243c-21.3 0-38.5-17.3-38.5-38.5S80.9 96 102.2 96c21.2 0 38.5 17.3 38.5 38.5 0 21.3-17.2 38.5-38.5 38.5zm282.1 243h-66.4V312c0-24.8-.5-56.7-34.5-56.7-34.6 0-39.9 27-39.9 54.9V416h-66.4V202.2h63.7v29.2h.9c8.9-16.8 30.6-34.5 62.9-34.5 67.2 0 79.7 44.3 79.7 101.9V416z"/></svg>
+    </a>
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://www.facebook.com/edenlabIT" target="_blank" rel="noopener" title="www.facebook.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.4.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2023 Fonticons, Inc.--><path d="M504 256C504 119 393 8 256 8S8 119 8 256c0 123.78 90.69 226.38 209.25 245V327.69h-63V256h63v-54.64c0-62.15 37-96.48 93.67-96.48 27.14 0 55.52 4.84 55.52 4.84v61h-31.28c-30.8 0-40.41 19.12-40.41 38.73V256h68.78l-11 71.69h-57.78V501C413.31 482.38 504 379.78 504 256z"/></svg>
+    </a>
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://twitter.com/EdenlabIT" target="_blank" rel="noopener" title="twitter.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.4.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2023 Fonticons, Inc.--><path d="M459.37 151.716c.325 4.548.325 9.097.325 13.645 0 138.72-105.583 298.558-298.558 298.558-59.452 0-114.68-17.219-161.137-47.106 8.447.974 16.568 1.299 25.34 1.299 49.055 0 94.213-16.568 130.274-44.832-46.132-.975-84.792-31.188-98.112-72.772 6.498.974 12.995 1.624 19.818 1.624 9.421 0 18.843-1.3 27.614-3.573-48.081-9.747-84.143-51.98-84.143-102.985v-1.299c13.969 7.797 30.214 12.67 47.431 13.319-28.264-18.843-46.781-51.005-46.781-87.391 0-19.492 5.197-37.36 14.294-52.954 51.655 63.675 129.3 105.258 216.365 109.807-1.624-7.797-2.599-15.918-2.599-24.04 0-57.828 46.782-104.934 104.934-104.934 30.213 0 57.502 12.67 76.67 33.137 23.715-4.548 46.456-13.32 66.599-25.34-7.798 24.366-24.366 44.833-46.132 57.827 21.117-2.273 41.584-8.122 60.426-16.243-14.292 20.791-32.161 39.308-52.628 54.253z"/></svg>
+    </a>
+  
+</div>
+            
+        </div>
+    </div>
+</footer>
+
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    <script id="__config" type="application/json">{"base": "..", "features": ["navigation.instant", "navigation.tracking", "navigation.sections", "navigation.indexes", "navigation.tabs", "navigation.top"], "search": "../assets/javascripts/workers/search.f886a092.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"default": "latest", "provider": "mike"}}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.aecac24b.min.js"></script>
+      
+    
+  </body>
+</html>
