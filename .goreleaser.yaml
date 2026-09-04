@@ -91,7 +91,7 @@ release:
     Install this version:
 
     ```
-    curl -sL "https://edenlabllc-kodjin-cli.s3.eu-north-1.amazonaws.com/kodjin-cli/installer.sh" | bash -s -- {{ .Tag }}
+    curl -fsSL "https://edenlabllc-kodjin-cli.s3.eu-north-1.amazonaws.com/kodjin-cli/installer.sh" | bash -s -- {{ .Tag }}
     ```
 
     Update an existing installation:

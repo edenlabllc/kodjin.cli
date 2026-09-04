@@ -387,7 +387,7 @@ pub async fn update(version: Option<String>) -> anyhow::Result<()> {
 
     fs::write(INSTALLER_TEMPFILE, script).context("Could not save installer")?;
 
-    let mut command = Command::new("sh");
+    let mut command = Command::new("bash");
     command.arg(INSTALLER_TEMPFILE);
 
     if let Some(version) = version {

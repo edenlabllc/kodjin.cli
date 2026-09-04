@@ -18,11 +18,14 @@ FILE_URL="${URL}/${VERSION}/kodjin-cli_${OS}_${ARCH}.tar.gz"
 echo "Downloading ${FILE_URL}"
 DOWNLOAD_PATH=/tmp/kodjin-cli.tar.gz
 
-curl "${FILE_URL}" -o "${DOWNLOAD_PATH}"
+curl --fail --location --retry 3 --retry-delay 1 \
+    -o "${DOWNLOAD_PATH}" \
+    "${FILE_URL}"
 
 TARGET_PATH="${HOME}"/.local/bin
+mkdir -p "${TARGET_PATH}"
 echo "Extracting binary to ${TARGET_PATH}"
-sudo sh -c "mkdir -p ${TARGET_PATH} && tar xf ${DOWNLOAD_PATH} -C ${TARGET_PATH}"
+tar xf ${DOWNLOAD_PATH} -C ${TARGET_PATH}
 
 # Linux case, you need to create a symlink manually due to
 # restrictions on permissions in the /usr/local/bin directory
