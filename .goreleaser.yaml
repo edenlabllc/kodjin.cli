@@ -42,11 +42,13 @@ changelog:
       - "^test:"
 
 blobs:
-  # Version-pinned artifacts, e.g. kodjin-cli/0.2.0/. Published for every release,
-  # including release candidates, which land under kodjin-cli/0.2.0-rc/.
+  # Version-pinned artifacts under the Git tag, e.g. kodjin-cli/vX.Y.Z/.
+  # Release candidates land under kodjin-cli/vX.Y.Z-rc/.
+  # Default directory is already {{ .ProjectName }}/{{ .Tag }}; set explicitly for clarity.
   - bucket: edenlabllc-kodjin-cli
     provider: s3
     region: eu-north-1
+    directory: "{{ .ProjectName }}/{{ .Tag }}"
     ids:
       - kodjin-cli
 
