@@ -1,3 +1,9 @@
+## Release v0.2.2
+Sep 18, 2026
+
+- Fix installer version paths: GoReleaser stores artifacts under the Git tag (`kodjin-cli/vX.Y.Z/`); accept both `vX.Y.Z` and `X.Y.Z`
+- Set GoReleaser blob directory explicitly to `{{ .ProjectName }}/{{ .Tag }}`
+
 ## Release v0.2.1
 Sep 03, 2026
 
